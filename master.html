@@ -2471,11 +2471,17 @@ async function saveSettingPassword(type) {
   const btn = document.getElementById(`btn-setp-${type}`);
   const oldHTML = btn.innerHTML; btn.disabled = true; btn.innerHTML = '⏳ Menyimpan...';
   try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', key).single();
-    if (error || !data) { showErr(`Gagal memverifikasi password ${label} lama`); return; }
-    if (data.value !== passwordLama) { showErr('Password lama salah'); elLama.value = ''; elLama.focus(); return; }
-    const { error: updateError } = await sb.from('settings').update({ value: passwordBaru }).eq('key', key);
-    if (updateError) throw updateError;
+    const { data, error } = await sb.from('settings').select('value').eq('key', key).maybeSingle();
+    if (error) { showErr(`Gagal memverifikasi password ${label} lama`); return; }
+    if (!data) {
+      // Belum ada password ${label} tersimpan di database ini -> buat baru (skip cek password lama)
+      const { error: insertError } = await sb.from('settings').insert({ key, value: passwordBaru });
+      if (insertError) throw insertError;
+    } else {
+      if (data.value !== passwordLama) { showErr('Password lama salah'); elLama.value = ''; elLama.focus(); return; }
+      const { error: updateError } = await sb.from('settings').update({ value: passwordBaru }).eq('key', key);
+      if (updateError) throw updateError;
+    }
     showToast(`✅ Password ${label} berhasil diubah!`, 'success');
     elLama.value = ''; elBaru.value = ''; elKonfirmasi.value = '';
     if (type === 'master') {
