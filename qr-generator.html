@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Absen</title>
+  <script src="config.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #fef9ef;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      max-width: 760px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(15,155,142,0.12);
+      border: 1px solid #ece4d3;
+    }
+    .title {
+      font-family: 'Baloo 2', sans-serif;
+      font-size: 28px;
+      color: #0f9b8e;
+    }
+    .sub {
+      color: #8a8071;
+      font-size: 14px;
+      margin: 4px 0 24px;
+    }
+    .qr-grid {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .qr-block {
+      flex: 1;
+      min-width: 240px;
+      max-width: 320px;
+    }
+    .qr-block-label {
+      font-weight: 800;
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+    .qr-block-label.masuk { color: #0a9d5c; }
+    .qr-block-label.pulang { color: #e8485f; }
+    .qr-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: white;
+      border-radius: 16px;
+      border: 3px solid #0f9b8e;
+      min-height: 280px;
+      min-width: 280px;
+    }
+    .qr-block-label.pulang ~ .qr-wrapper { border-color: #e8485f; }
+    .qr-wrapper img {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+    .jam-block {
+      font-size: 13px;
+      margin-top: 10px;
+      color: #2b2620;
+    }
+    .jam-info {
+      color: #0f9b8e;
+      font-weight: 700;
+    }
+    .url-display {
+      font-size: 10px;
+      color: #8a8071;
+      word-break: break-all;
+      background: #f5f5f5;
+      padding: 8px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+    .info {
+      font-size: 13px;
+      color: #2b2620;
+      line-height: 1.8;
+      text-align: left;
+      background: #f8f8f8;
+      padding: 16px;
+      border-radius: 12px;
+    }
+    .info strong { color: #0f9b8e; }
+    .btn-print {
+      padding: 12px 32px;
+      border: none;
+      border-radius: 12px;
+      background: #0f9b8e;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      margin: 12px 0;
+    }
+    .btn-print:hover { background: #0b756c; }
+    @media print {
+      .no-print { display: none !important; }
+      html, body {
+        height: auto;
+        padding: 0;
+        background: white;
+        align-items: flex-start;
+      }
+      .card {
+        max-width: 100%;
+        width: 100%;
+        border: none;
+        box-shadow: none;
+        padding: 4vh 4vw;
+      }
+      .title { font-size: 6vw; }
+      .sub { font-size: 2.6vw; margin-bottom: 3vh; }
+      .qr-grid { gap: 4vw; }
+      .qr-block { max-width: 44vw; }
+      .qr-block-label { font-size: 2.6vw; }
+      .qr-wrapper {
+        min-width: 0;
+        min-height: 0;
+        width: 42vw;
+        height: 42vw;
+        max-height: 50vh;
+        max-width: 50vh;
+        padding: 2vw;
+        margin: 0 auto;
+      }
+      .jam-block { font-size: 2.4vw; }
+      .info {
+        font-size: 2.2vw;
+        max-width: 90vw;
+        margin: 2vh auto 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="title">📋 QR Code Absen</div>
+  <div class="sub">Tempel di pintu masuk &amp; pintu keluar kantor</div>
+
+  <div class="qr-grid">
+    <!-- QR ABSEN MASUK -->
+    <div class="qr-block">
+      <div class="qr-block-label masuk">🟢 ABSEN MASUK</div>
+      <div class="qr-wrapper">
+        <img id="qr-image-masuk" src="" alt="QR Code Absen Masuk">
+      </div>
+      <div class="url-display no-print" id="url-display-masuk"></div>
+      <div class="jam-block">
+        <strong>⏰ Jam:</strong><br>
+        <span class="jam-info" id="jam-info-masuk">07:00 - 09:00 WIB</span>
+      </div>
+    </div>
+
+    <!-- QR ABSEN PULANG -->
+    <div class="qr-block">
+      <div class="qr-block-label pulang">🔴 ABSEN PULANG</div>
+      <div class="qr-wrapper">
+        <img id="qr-image-pulang" src="" alt="QR Code Absen Pulang">
+      </div>
+      <div class="url-display no-print" id="url-display-pulang"></div>
+      <div class="jam-block">
+        <strong>⏰ Jam:</strong><br>
+        <span class="jam-info" id="jam-info-pulang">16:00 - 18:00 WIB</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info">
+    <strong>📌 Cara Pakai:</strong><br>
+    1. Scan QR Code pakai kamera HP<br>
+    2. Otomatis buka halaman absen<br>
+    3. Pilih nama → Klik tombol Absen<br>
+    4. ✅ Selesai!
+  </div>
+
+  <button class="btn-print no-print" onclick="window.print()">🖨️ Cetak QR</button>
+  <button class="btn-print no-print" onclick="window.location.href='index.html'" style="background:#ece4d3;color:#2b2620;">⬅ Kembali</button>
+</div>
+
+<script>
+// ============================================================
+// KONFIGURASI DOMAIN & CABANG
+// ============================================================
+const DOMAIN = 'https://sri-rejeki-roti.github.io/srirejeki';
+
+// Ganti angka ini kalau mau cetak QR untuk cabang lain
+const CABANG_ID = 1;
+
+// ============================================================
+// SUPABASE
+// ============================================================
+let sb;
+try {
+  if (typeof supabase === 'undefined') throw new Error('Library Supabase gagal dimuat');
+  sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+} catch (e) { console.error('Supabase init error:', e); }
+
+// ============================================================
+// GENERATE QR (MASUK & PULANG)
+// ============================================================
+function buildQrUrl(targetUrl) {
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=' +
+    encodeURIComponent(targetUrl) + '&color=0f9b8e&bgcolor=ffffff&margin=18';
+}
+
+function updateQR() {
+  const urlMasuk = DOMAIN + '/absen-scan.html?cabang=' + CABANG_ID; // default mode = masuk
+  const urlPulang = DOMAIN + '/absen-scan.html?cabang=' + CABANG_ID + '&mode=pulang';
+
+  document.getElementById('url-display-masuk').textContent = '🔗 ' + urlMasuk;
+  document.getElementById('url-display-pulang').textContent = '🔗 ' + urlPulang;
+
+  const imgMasuk = document.getElementById('qr-image-masuk');
+  imgMasuk.src = buildQrUrl(urlMasuk);
+  imgMasuk.alt = 'QR Code Absen Masuk untuk ' + urlMasuk;
+
+  const imgPulang = document.getElementById('qr-image-pulang');
+  imgPulang.src = buildQrUrl(urlPulang);
+  imgPulang.alt = 'QR Code Absen Pulang untuk ' + urlPulang;
+
+  console.log('✅ QR Masuk:', urlMasuk);
+  console.log('✅ QR Pulang:', urlPulang);
+}
+
+// ============================================================
+// AMBIL JAM OPERASIONAL DARI SUPABASE (sinkron dengan Payroll)
+// ============================================================
+async function loadJamUntukKey(settingKey, elId, defaultBuka, defaultTutup) {
+  const el = document.getElementById(elId);
+  if (!sb) {
+    console.warn('⚠️ Supabase belum siap, pakai default untuk', settingKey);
+    return;
+  }
+
+  try {
+    const { data, error } = await sb
+      .from('settings')
+      .select('value')
+      .eq('key', settingKey)
+      .eq('cabang_id', CABANG_ID)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data && data.value) {
+      let jam;
+      try {
+        jam = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      } catch (e) {
+        jam = { buka: defaultBuka, tutup: defaultTutup };
+      }
+      el.textContent = (jam.buka || defaultBuka) + ' - ' + (jam.tutup || defaultTutup) + ' WIB';
+      console.log('✅ ' + settingKey + ' dimuat:', jam);
+    } else {
+      console.log('ℹ️ Belum ada setting ' + settingKey + ' untuk cabang ini, pakai default');
+    }
+  } catch (e) {
+    console.error('❌ Gagal memuat ' + settingKey + ':', e);
+    // Biarkan teks default di HTML kalau gagal fetch
+  }
+}
+
+async function loadJamOperasional() {
+  await Promise.all([
+    loadJamUntukKey('jam_operasional', 'jam-info-masuk', '07:00', '09:00'),
+    loadJamUntukKey('jam_operasional_pulang', 'jam-info-pulang', '16:00', '18:00')
+  ]);
+}
+
+// ============================================================
+// JALANKAN SAAT HALAMAN LOAD
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+  updateQR();
+  loadJamOperasional();
+  console.log('✅ QR Generator ready!');
+  console.log('🌐 Domain:', DOMAIN);
+});
+</script>
+</body>
+</html>

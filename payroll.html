@@ -1,0 +1,4065 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+<meta name="theme-color" content="#0f9b8e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sri Rejeki">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Payroll — Sri Rejeki</title>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const swUrl = new URL('sw.js', document.baseURI).href;
+    const scope = new URL('./', document.baseURI).href;
+    navigator.serviceWorker.register(swUrl, { scope })
+      .then(reg => console.log('[SW] Terdaftar:', reg.scope))
+      .catch(err => console.warn('[SW] Gagal:', err));
+  });
+}
+</script>
+<script src="config.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   MOBILE FIRST — Base Styles (HP kecil)
+   ============================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --primary: #0f9b8e;
+  --primary-light: #e3f9f5;
+  --primary-dark: #0b756c;
+  --accent: #2dd4bf;
+  --accent-dark: #0c8478;
+  --bg: #fef9ef;
+  --card: #ffffff;
+  --border: #ece4d3;
+  --text: #2b2620;
+  --text-muted: #8a8071;
+  --success: #0a9d5c;
+  --success-bg: #e6f9ef;
+  --danger: #e8485f;
+  --danger-bg: #fdeaec;
+  --indigo: #6366f1;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 2px 8px rgba(43,38,32,0.06);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 56px;
+  --topbar-height: 52px;
+  --dashboardbar-height: 46px;
+}
+html {
+  overscroll-behavior-y: none;
+}
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--nav-height) + var(--dashboardbar-height) + 16px + var(--safe-bottom));
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+}
+button, .clickable { min-height: 44px; min-width: 44px; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: linear-gradient(135deg, #0f9b8e 0%, #0b756c 100%);
+  color: white; padding: 0 12px; height: var(--topbar-height);
+  display: flex; align-items: center; gap: 10px;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 12px rgba(15,155,142,0.25);
+}
+.topbar-brand { display: flex; align-items: center; gap: 8px; }
+.topbar-icon {
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.topbar-title { font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; line-height: 1.1; }
+.topbar-sub { font-size: 9px; opacity: 0.8; font-weight: 500; }
+.topbar .spacer { flex: 1; }
+.network-indicator {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.network-indicator.online { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.4); }
+.network-indicator.offline { background: #f87171; box-shadow: 0 0 8px rgba(248,113,113,0.4); animation: pulse-red 1s infinite; }
+@keyframes pulse-red { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+/* ── MAIN ── */
+.main {
+  padding: 10px 12px;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── SUMMARY CARDS ── */
+.summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.sum-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 64px;
+}
+.sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.sum-card.green::before { background: linear-gradient(90deg, var(--success), #087a46); }
+.sum-card.blue::before { background: linear-gradient(90deg, var(--primary), var(--primary-dark)); }
+.sum-card.red::before { background: linear-gradient(90deg, var(--danger), #c0344c); }
+.sum-card.orange::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.sum-card.indigo::before { background: linear-gradient(90deg, var(--indigo), #4f46e5); }
+.sum-label { font-size: 7px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; }
+.sum-val { font-family: 'Baloo 2', sans-serif; font-size: 20px; font-weight: 800; line-height: 1.2; }
+.sum-sub { font-size: 7px; color: var(--text-muted); margin-top: 1px; }
+
+/* ── DATE BAR ── */
+.date-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.date-bar label { font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+/* Shortcut 6 hari kerja */
+.abs-shortcuts {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 6px; margin-bottom: 12px;
+}
+.abs-shortcut-btn {
+  padding: 8px 6px; border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--card); color: var(--text);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  text-align: center; transition: all 0.15s;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.abs-shortcut-btn:active { transform: scale(0.96); }
+.abs-shortcut-btn.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
+.abs-shortcut-btn .sc-label { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+.abs-shortcut-btn.active .sc-label { color: var(--primary); }
+.abs-shortcut-btn .sc-status { font-size: 9.5px; margin-top: 2px; font-weight: 600; }
+.abs-shortcut-btn .sc-status.filled { color: var(--success); }
+.abs-shortcut-btn .sc-status.empty  { color: #d97706; }
+/* Badge status absensi */
+.abs-status-badge {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 12px; border-radius: 10px; margin-bottom: 10px;
+  font-size: 12px; font-weight: 600;
+}
+.abs-status-badge.filled { background: var(--success-bg); color: var(--success); }
+.abs-status-badge.empty  { background: #fff8e6; color: #b45309; }
+.abs-status-badge.hidden { display: none; }
+.date-bar input[type="date"] {
+  flex: 1;
+  min-width: 100px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg);
+  height: 40px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.date-bar input[type="date"]:focus { outline: none; border-color: var(--primary); }
+
+/* ── CARD ── */
+.roti-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+/* ── ABSENSI ── */
+.abs-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  min-height: 40px;
+}
+.abs-item:last-child { border-bottom: none; }
+.abs-item:active { background: var(--primary-light); }
+.abs-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+}
+.abs-info { flex: 1; min-width: 0; max-width: 56%; }
+.abs-name { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.abs-jabatan { font-size: 9.5px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.toggle-hadir {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+.toggle-hadir-track {
+  width: 100%; height: 100%;
+  border-radius: 20px;
+  background: var(--border);
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  padding: 3px;
+}
+.toggle-hadir.active .toggle-hadir-track { background: var(--success); }
+.toggle-hadir-thumb {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  transform: translateX(0);
+}
+.toggle-hadir.active .toggle-hadir-thumb { transform: translateX(20px); }
+.toggle-status {
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: left;
+}
+.toggle-status.on { color: var(--success); }
+.toggle-status.off { color: var(--text-muted); }
+.abs-lock-btn {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.abs-lock-btn:active { transform: scale(0.92); }
+.abs-lock-btn.unlocked { background: #fff8e6; color: #b45309; }
+.toggle-hadir.locked { cursor: default; opacity: 0.85; }
+
+/* ── REKAP PILLS ── */
+.rekap-pill {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  text-align: center;
+}
+.rekap-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.btn-save {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(15,155,142,0.30);
+  min-height: 48px;
+}
+.btn-cancel-save {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 48px;
+}
+
+/* ── DASHBOARD BAR (di atas Navbar) ── */
+.dashboard-bar {
+  position: fixed;
+  bottom: calc(var(--nav-height) + var(--safe-bottom));
+  left: 0;
+  right: 0;
+  z-index: 58;
+  background: var(--card);
+  border-top: 1.5px solid var(--border);
+  padding: 5px 12px;
+  height: var(--dashboardbar-height);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+.dashboard-bar-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 13px; font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  min-height: 36px;
+  transition: opacity 0.15s;
+}
+.dashboard-bar-btn:active { opacity: 0.85; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: var(--card);
+  border-top: 2px solid var(--border);
+  display: flex;
+  box-shadow: 0 -4px 16px rgba(43,38,32,0.08);
+  padding-bottom: var(--safe-bottom);
+  height: calc(var(--nav-height) + var(--safe-bottom));
+}
+.bottom-nav .nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  font-size: 8px;
+  font-weight: 600;
+  position: relative;
+  min-height: 44px;
+}
+.bottom-nav .nav-btn svg { width: 20px; height: 20px; }
+.bottom-nav .nav-btn.active { color: var(--primary-dark); }
+.bottom-nav .nav-btn.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 0 0 3px 3px;
+}
+.bottom-nav .nav-btn:active { background: var(--primary-light); }
+
+/* ── KEGIATAN (LEMBUR) ── */
+.lembur-form {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.lembur-form .lf-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.lembur-form .form-group { margin-bottom: 10px; }
+.lembur-form .form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.lembur-form .form-group input,
+.lembur-form .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg);
+  height: 44px;
+}
+.lembur-form .form-group input:focus,
+.lembur-form .form-group select:focus { outline: none; border-color: var(--primary); }
+.lembur-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-simpan-lembur {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 4px;
+  min-height: 48px;
+}
+.btn-simpan-lembur:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── LEMBUR ITEM ── */
+.lembur-item {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.lembur-item:last-child { border-bottom: none; }
+.lembur-item .li-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lembur-item .li-name { font-weight: 700; font-size: 14px; }
+.lembur-item .li-total { font-weight: 800; color: var(--primary-dark); font-size: 14px; }
+.lembur-item .li-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--primary-light);
+}
+.lembur-item .li-detail span { display: inline-block; margin-right: 10px; }
+.li-detail-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 5px; padding: 6px 8px; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--primary-light); }
+.li-detail-info { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--text-muted); flex: 1; }
+.li-detail-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.btn-lembur-edit, .btn-lembur-del {
+  border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
+  padding: 4px 8px; font-family: inherit; font-weight: 600; min-height: 28px;
+}
+.btn-lembur-edit { background: var(--primary-light); color: var(--primary-dark); }
+.btn-lembur-del  { background: var(--danger-bg); color: var(--danger); }
+.btn-lembur-edit:active { background: var(--primary); color: white; }
+.btn-lembur-del:active  { background: var(--danger); color: white; }
+
+/* ── REKAP ACCORDION ── */
+.rekap-accordion {
+  border-bottom: 1px solid var(--border);
+}
+.rekap-accordion:last-child { border-bottom: none; }
+
+.rekap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  background: var(--card);
+  transition: background 0.15s;
+  gap: 10px;
+}
+.rekap-header:hover { background: var(--primary-light); }
+.rekap-header:active { background: var(--primary-light); }
+
+.rekap-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.rekap-header-left .rh-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+}
+.rekap-header-left .rh-name { font-weight: 700; font-size: 14px; }
+.rekap-header-left .rh-role { font-size: 11px; color: var(--text-muted); margin-left: 6px; }
+.rekap-header-left .rh-total {
+  font-weight: 800;
+  color: var(--primary-dark);
+  font-size: 14px;
+  margin-left: auto;
+  padding-right: 8px;
+}
+
+.rekap-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.rekap-header-right .rh-toggle {
+  font-size: 16px;
+  color: var(--text-muted);
+  transition: transform 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.rekap-header-right .rh-toggle.open { transform: rotate(180deg); }
+.rekap-header-right .rh-print {
+  background: none;
+  border: none;
+  color: var(--primary-dark);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.15s;
+  min-height: 32px;
+  margin-left: 4px;
+}
+.rekap-header-right .rh-print:hover { background: var(--primary-light); }
+.rekap-header-right .rh-print:active { background: var(--primary); color: white; }
+
+.rekap-body {
+  padding: 10px 14px 14px;
+  background: var(--bg);
+  display: none;
+}
+.rekap-body.open { display: block; }
+
+/* ── REKAP DETAIL (Clear & Easy to Read) ── */
+.rekap-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.rekap-stats-grid .stat-box {
+  border-radius: 6px;
+  padding: 6px;
+  text-align: center;
+}
+.rekap-stats-grid .stat-box .num {
+  font-size: 18px;
+  font-weight: 800;
+}
+.rekap-stats-grid .stat-box .lbl {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+.stat-hadir { background: var(--success-bg); }
+.stat-hadir .num { color: var(--success); }
+.stat-gaji { background: var(--primary-light); }
+.stat-gaji .num { color: var(--primary-dark); }
+.stat-lembur { background: #f0f4ff; }
+.stat-lembur .num { color: var(--indigo); }
+
+.rekap-perhitungan {
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 10px;
+}
+.rekap-perhitungan .label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.rekap-perhitungan .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 3px 0;
+}
+.rekap-perhitungan .row.total {
+  border-top: 2px solid var(--border);
+  margin-top: 6px;
+  padding-top: 6px;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--primary-dark);
+}
+.rekap-lembur-detail {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rekap-lembur-detail span {
+  background: var(--primary-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+/* ── PEGAWAI ── */
+.peg-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  min-height: 44px;
+}
+.peg-item:last-child { border-bottom: none; }
+.peg-item:active { background: var(--primary-light); }
+.peg-item .pi-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+}
+.peg-item .pi-info { flex: 1; }
+.peg-item .pi-name { font-size: 12px; font-weight: 700; }
+.peg-item .pi-jabatan { font-size: 9px; color: var(--text-muted); }
+.peg-item .pi-status { font-size: 8px; font-weight: 700; }
+.peg-item .pi-status.aktif { color: var(--success); }
+.peg-item .pi-status.nonaktif { color: var(--danger); }
+
+/* ── PEGAWAI FORM ── */
+.peg-form {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.peg-form .pf-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.peg-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.peg-form-row .form-group {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+.peg-form-row .form-group label {
+  font-size: 10px;
+  margin-bottom: 2px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.peg-form-row .form-group input,
+.peg-form-row .form-group .custom-select-btn {
+  height: 38px !important;
+  padding: 6px 10px !important;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.peg-form .custom-select-wrap.full {
+  min-width: unset;
+  width: 100%;
+}
+.peg-form .custom-select-wrap.full .custom-select-btn {
+  height: 38px !important;
+  padding: 6px 10px !important;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.peg-form .custom-select-wrap.full .custom-select-dropdown { font-size: 13px; max-height: 180px; }
+.peg-form .custom-select-wrap.full .custom-option { padding: 10px 12px; font-size: 13px; }
+.peg-form .form-group input[readonly] {
+  background: #f0f0f0;
+  cursor: not-allowed;
+  color: #666;
+}
+.btn-simpan-peg, .btn-hapus-peg {
+  padding: 8px 12px;
+  font-size: 13px;
+  min-height: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.btn-simpan-peg {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+}
+.btn-simpan-peg:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-hapus-peg {
+  background: var(--danger);
+  color: white;
+}
+.btn-hapus-peg:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width:480px) {
+  .peg-form-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .peg-form-row .form-group input,
+  .peg-form-row .form-group .custom-select-btn,
+  .peg-form-row .form-group .custom-select-wrap.full .custom-select-btn {
+    height: 34px !important;
+    padding: 4px 8px !important;
+    font-size: 12px;
+  }
+  .btn-simpan-peg, .btn-hapus-peg {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 34px;
+    height: 34px;
+  }
+  .rekap-header { padding: 10px 10px; gap: 6px; }
+  .rekap-header-left .rh-avatar { width: 28px; height: 28px; font-size: 11px; }
+  .rekap-header-left .rh-name { font-size: 13px; }
+  .rekap-header-left .rh-total { font-size: 13px; }
+  .rekap-header-right .rh-print { font-size: 14px; padding: 2px 6px; min-height: 28px; }
+  .rekap-stats-grid { grid-template-columns: 1fr 1fr 1fr; }
+  .rekap-stats-grid .stat-box .num { font-size: 15px; }
+}
+
+/* ── SETTING ACCORDION ── */
+.setting-group {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.setting-group .sg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 14px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s;
+  gap: 10px;
+}
+.setting-group .sg-header:active { background: var(--primary-light); }
+.setting-group .sg-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.2px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.setting-group .sg-arrow {
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.setting-group.open .sg-arrow { transform: rotate(180deg); }
+.setting-group .sg-body {
+  padding: 0 14px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+.setting-group.open .sg-body {
+  padding: 0 14px 14px;
+  max-height: 1000px;
+}
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-row .label { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.custom-select-wrap { position: relative; min-width: 110px; }
+.custom-select-btn {
+  width: 100%;
+  padding: 6px 28px 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color 0.15s;
+  height: 38px;
+}
+.custom-select-btn:focus,
+.custom-select-btn.open { outline: none; border-color: var(--primary); }
+.custom-select-btn .caret { font-size: 9px; color: var(--text-muted); transition: transform 0.15s; }
+.custom-select-btn.open .caret { transform: rotate(180deg); }
+.custom-select-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  z-index: 100;
+  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.custom-select-dropdown.open { display: block; }
+.custom-option {
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.custom-option:hover { background: var(--bg); }
+.custom-option.selected { font-weight: 700; color: var(--primary); background: var(--primary-light); }
+
+.custom-select-wrap.full { min-width: unset; width: 100%; }
+.custom-select-wrap.full .custom-select-btn {
+  width: 100%;
+  height: 38px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg);
+  border-radius: 8px;
+}
+.custom-select-wrap.full .custom-select-dropdown { font-size: 13px; }
+.custom-select-wrap.full .custom-option { padding: 10px 12px; font-size: 13px; }
+
+.btn-setting-save {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 10px;
+  min-height: 48px;
+}
+.btn-setting-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.setting-status { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px; display: block; }
+
+/* ── LEMBUR DETEKSI PENDING ── */
+.lembur-pending-card {
+  background: #fff8e6;
+  border: 1.5px solid #f59e0b;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.lembur-pending-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: #fffbf0;
+  border-bottom: 1px solid #f59e0b;
+  font-size: 12px; font-weight: 700; color: #92400e;
+}
+.lembur-pending-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(245,158,11,0.2);
+  background: #fff8e6;
+}
+.lembur-pending-item:last-child { border-bottom: none; }
+.lp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.lp-name { font-weight: 700; font-size: 13px; color: var(--text); }
+.lp-info { font-size: 11px; color: #92400e; margin-top: 3px; }
+.lp-badge { background: #f59e0b; color: white; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.lp-jam-edit { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.lp-jam-edit label { font-size: 11px; font-weight: 600; color: #92400e; white-space: nowrap; }
+.lp-jam-input { width: 70px; padding: 6px 8px; border: 1.5px solid #f59e0b; border-radius: 6px; font-size: 13px; font-weight: 700; font-family: inherit; background: white; text-align: center; }
+.lp-jam-input:focus { outline: none; border-color: var(--primary); }
+.lp-actions { display: flex; gap: 6px; margin-top: 8px; }
+.btn-lp-approve {
+  flex: 2; padding: 8px; border: none; border-radius: 8px;
+  background: var(--success); color: white;
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+  min-height: 36px;
+}
+.btn-lp-approve:active { opacity: 0.85; }
+.btn-lp-skip {
+  flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 8px;
+  background: white; color: var(--text-muted);
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+  min-height: 36px;
+}
+.btn-lp-skip:active { background: var(--danger-bg); color: var(--danger); }
+.lp-note { font-size: 10px; color: #b45309; font-style: italic; margin-top: 4px; }
+
+/* ── BAGIAN ── */
+.bagian-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.bagian-item:last-child { border-bottom: none; }
+.bagian-item .bi-name { font-weight: 700; }
+.bagian-item .bi-gaji { color: var(--text-muted); }
+.bagian-item .bi-lembur { color: var(--primary-dark); }
+.bagian-item .bi-del {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  min-height: 36px;
+}
+.bagian-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.bagian-form-row input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--bg);
+  height: 40px;
+}
+.bagian-form-row input:focus { outline: none; border-color: var(--primary); }
+
+/* ── EMPTY STATE ── */
+.empty-state { padding: 30px 16px; text-align: center; color: var(--text-muted); }
+.empty-title { font-weight: 700; color: var(--text); font-size: 14px; margin-bottom: 4px; }
+.empty-sub { font-size: 12px; }
+
+/* ── LOADING SKELETON ── */
+.skeleton {
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+}
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-text { height: 14px; margin: 4px 0; }
+.skeleton-avatar { width: 36px; height: 36px; border-radius: 50%; }
+
+/* ── LOADING SCREEN ── */
+.loading-screen {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(15,155,142,0.07);
+  backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.5s ease;
+}
+.loading-screen.hide { opacity: 0; pointer-events: none; }
+.loading-card {
+  background: white; border-radius: 24px; padding: 32px 28px;
+  min-width: 280px; max-width: 360px; width: 90%;
+  box-shadow: 0 24px 60px rgba(15,155,142,0.18);
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.loading-brand-icon {
+  width: 52px; height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+.loading-title { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.loading-sub { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 24px; }
+.loading-step { font-size: 13px; font-weight: 600; color: var(--primary-dark); margin-bottom: 12px; min-height: 20px; }
+.loading-track { width: 100%; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-bottom: 10px; }
+.loading-fill { height: 100%; border-radius: 99px; width: 0%; background: linear-gradient(90deg, var(--accent), var(--primary)); transition: width 0.4s; }
+.loading-pct { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--nav-height) + 70px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--text);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transition: all 0.25s;
+  z-index: 200;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── CONFIRM ── */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  padding: 20px;
+}
+.confirm-overlay.open { opacity: 1; pointer-events: all; }
+.confirm-card {
+  background: white; border-radius: 20px; padding: 24px;
+  max-width: 380px; width: 100%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+  transform: translateY(12px); transition: transform 0.2s;
+}
+.confirm-overlay.open .confirm-card { transform: translateY(0); }
+.confirm-icon { font-size: 28px; margin-bottom: 8px; }
+.confirm-title { font-weight: 800; font-size: 16px; color: var(--text); margin-bottom: 4px; }
+.confirm-msg { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 16px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-btn-cancel {
+  padding: 10px 18px; border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: white; color: var(--text-muted);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  min-height: 44px;
+}
+.confirm-btn-ok {
+  padding: 10px 22px; border-radius: 10px;
+  border: none;
+  background: var(--danger);
+  color: white;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+/* ── OFFLINE BANNER ── */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  background: #dc2626;
+  color: white;
+  text-align: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  transform: translateY(-100%);
+  transition: transform 0.3s;
+}
+.offline-banner.show { transform: translateY(0); }
+
+/* ── TABLET & DESKTOP ── */
+@media (min-width: 480px) {
+  .main { padding: 16px 20px; max-width: 600px; }
+  .summary-row { gap: 10px; }
+  .sum-card { padding: 14px 12px; min-height: 80px; }
+  .sum-val { font-size: 24px; }
+  .sum-label { font-size: 9px; }
+  .bottom-nav .nav-btn { font-size: 10px; }
+  .bottom-nav .nav-btn svg { width: 24px; height: 24px; }
+  .abs-item { padding: 9px 14px; }
+  .toggle-hadir { width: 48px; height: 28px; }
+  .toggle-hadir-thumb { width: 22px; height: 22px; }
+  .toggle-hadir.active .toggle-hadir-thumb { transform: translateX(20px); }
+  .toggle-status { font-size: 12px; min-width: 40px; }
+}
+@media (min-width: 768px) {
+  .main { max-width: 720px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- DEVICE GUARD: HALAMAN INI KHUSUS UNTUK HP / SMARTPHONE -->
+<!-- ============================================================ -->
+<div id="device-guard-overlay" style="position:fixed;inset:0;z-index:999999;background:#fef9ef;display:flex;align-items:center;justify-content:center;padding:24px;font-family:'Inter',sans-serif;text-align:center;">
+  <div style="max-width:380px;">
+    <div style="font-size:56px;margin-bottom:14px;line-height:1;">📱</div>
+    <div style="font-family:'Baloo 2',sans-serif;font-size:22px;font-weight:800;color:#2b2620;margin-bottom:10px;">Khusus HP / Smartphone</div>
+    <div style="font-size:14px;color:#8a8071;line-height:1.55;margin-bottom:26px;">
+      Halaman <b id="device-guard-appname" style="color:#2b2620;">ini</b> didesain khusus untuk diakses dari HP agar tampilan dan fungsinya optimal. Silakan buka dari smartphone Anda.
+    </div>
+    <a href="index.html" style="display:inline-block;background:linear-gradient(135deg,#0f9b8e,#0b756c);color:#fff;padding:14px 30px;border-radius:12px;text-decoration:none;font-weight:700;font-size:14px;box-shadow:0 8px 20px rgba(15,155,142,.30);">⬅ Kembali ke Menu</a>
+    <div style="margin-top:20px;">
+      <a href="#" id="device-guard-force" style="font-size:12px;color:#8a8071;text-decoration:underline;">Tetap buka di perangkat ini</a>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  try {
+    var APPNAME = 'Payroll';
+    var nameEl = document.getElementById('device-guard-appname');
+    if (nameEl) nameEl.textContent = APPNAME;
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('force') === '1') {
+      var ov0 = document.getElementById('device-guard-overlay');
+      if (ov0) ov0.remove();
+      return;
+    }
+    var ua = navigator.userAgent || '';
+    var isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet|BlackBerry|IEMobile|Opera Mini|Windows Phone/i.test(ua) || window.innerWidth <= 480;
+    if (isMobile) {
+      var ov = document.getElementById('device-guard-overlay');
+      if (ov) ov.remove();
+    } else {
+      var forceLink = document.getElementById('device-guard-force');
+      if (forceLink) forceLink.addEventListener('click', function(e){
+        e.preventDefault();
+        var url = new URL(window.location.href);
+        url.searchParams.set('force', '1');
+        window.location.href = url.toString();
+      });
+    }
+  } catch(e) { console.error('Device guard error:', e); }
+})();
+</script>
+
+
+<!-- ============================================================ -->
+<!-- LOGIN GATE: PROTEKSI PASSWORD UNTUK HALAMAN INI -->
+<!-- ============================================================ -->
+<!-- ============================================================ -->
+<!-- LOGIN GATE: PIN KEYPAD STYLE - Payroll -->
+<!-- ============================================================ -->
+<style>
+#login-gate-overlay {
+  position:fixed;inset:0;z-index:999998;
+  background:linear-gradient(160deg,#e3f9f5 0%,#fef9ef 55%,#d0f5f0 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Inter',sans-serif;
+}
+.pkp-card { width:100%;max-width:320px;padding:0 20px;text-align:center; }
+.pkp-header {
+  background:linear-gradient(135deg,#0f9b8e,#0b756c);
+  border-radius:20px;padding:18px 24px 16px;
+  margin-bottom:26px;box-shadow:0 8px 24px rgba(15,155,142,0.35);
+}
+.pkp-appname {
+  font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:900;
+  color:#fff;letter-spacing:0.5px;text-transform:uppercase;
+}
+.pkp-subtitle { font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px; }
+.pkp-dots { display:flex;justify-content:center;gap:16px;margin-bottom:26px; }
+.pkp-dot {
+  width:15px;height:15px;border-radius:50%;
+  border:2.5px solid #0f9b8e;background:transparent;
+  transition:all 0.15s ease;
+}
+.pkp-dot.filled { background:#0f9b8e;box-shadow:0 0 8px rgba(15,155,142,0.5); }
+.pkp-dot.error { border-color:#e8485f;background:#e8485f; }
+.pkp-dots-wrap.shake { animation:pkp-shake 0.38s ease; }
+@keyframes pkp-shake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 60%{transform:translateX(7px)}
+}
+.pkp-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px; }
+.pkp-btn {
+  height:64px;border:2px solid #ece4d3;border-radius:16px;
+  background:#fff;color:#2b2620;
+  font-size:22px;font-weight:700;font-family:'Baloo 2',sans-serif;
+  cursor:pointer;box-shadow:0 3px 10px rgba(43,38,32,0.08);
+  transition:all 0.1s ease;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+.pkp-btn:active { transform:scale(0.91);background:#e3f9f5;border-color:#0f9b8e;color:#0f9b8e;box-shadow:0 0 0 3px rgba(15,155,142,0.15); }
+.pkp-bottom-row { display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px; }
+.pkp-btn-del {
+  height:64px;border:2px solid #ece4d3;border-radius:16px;
+  background:#fff;color:#8a8071;cursor:pointer;
+  box-shadow:0 3px 10px rgba(43,38,32,0.08);
+  transition:all 0.1s ease;user-select:none;-webkit-tap-highlight-color:transparent;
+  display:flex;align-items:center;justify-content:center;
+}
+.pkp-btn-del:active { transform:scale(0.91);background:#fdeaec;border-color:#e8485f;color:#e8485f; }
+.pkp-btn-empty { height:64px;background:transparent;border:none;pointer-events:none; }
+.pkp-btn-ok {
+  height:64px;border:2px solid #0f9b8e;border-radius:16px;
+  background:linear-gradient(135deg,#0f9b8e,#0b756c);color:#fff;
+  font-size:22px;font-weight:800;cursor:pointer;
+  box-shadow:0 4px 14px rgba(15,155,142,0.35);
+  transition:all 0.1s ease;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+.pkp-btn-ok:active { transform:scale(0.91);opacity:0.85; }
+#pkp-error {
+  display:none;color:#e8485f;font-size:12px;font-weight:600;
+  text-align:center;margin:8px 0 0;padding:8px 12px;
+  background:#fdeaec;border-radius:10px;
+}
+.pkp-back-link { margin-top:18px; }
+.pkp-back-link a { font-size:12px;color:#8a8071;text-decoration:underline; }
+#lg-setup-fields, #lg-login-fields { display:none !important; }
+#lg-error { display:none !important; }
+#lg-submit-btn { display:none !important; }
+#pkp-setup-mode {
+  display:none;
+  background:#fff;border-radius:16px;padding:20px;
+  border:2px solid #ece4d3;margin-bottom:16px;text-align:left;
+}
+#pkp-setup-mode.active { display:block; }
+.pkp-setup-label { font-size:13px;font-weight:700;color:#2b2620;margin-bottom:8px;display:block; }
+.pkp-setup-input {
+  -webkit-text-security:disc;width:100%;padding:12px 14px;
+  border:2px solid #ece4d3;border-radius:12px;
+  font-size:16px;font-weight:700;font-family:inherit;
+  box-sizing:border-box;outline:none;color:#2b2620;margin-bottom:10px;display:block;
+}
+.pkp-setup-input:focus { border-color:#0f9b8e; }
+.pkp-submit-btn {
+  width:100%;padding:14px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,#0f9b8e,#0b756c);
+  color:#fff;font-size:15px;font-weight:800;cursor:pointer;
+  box-shadow:0 6px 20px rgba(15,155,142,0.35);
+  transition:opacity 0.15s;
+}
+.pkp-submit-btn:active { opacity:0.85; }
+</style>
+
+<div id="login-gate-overlay">
+  <div class="pkp-card">
+    <div class="pkp-header">
+      <div class="pkp-appname">Payroll</div>
+      <div class="pkp-subtitle">Masukkan PIN untuk masuk</div>
+    </div>
+
+    <div id="pkp-setup-mode">
+      <span class="pkp-setup-label">Buat Password Baru (min. 4 angka)</span>
+      <input type="tel" id="lg-pass-new" class="pkp-setup-input" placeholder="PIN baru..." maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <input type="tel" id="lg-pass-confirm" class="pkp-setup-input" placeholder="Ulangi PIN baru..." maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-lpignore="true" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <button class="pkp-submit-btn" onclick="pkpHandleSetup()">Simpan Password</button>
+    </div>
+
+    <div id="pkp-login-mode">
+      <div class="pkp-dots-wrap" id="pkp-dots-wrap">
+        <div class="pkp-dots" id="pkp-dots">
+          <div class="pkp-dot" id="pkp-d0"></div>
+          <div class="pkp-dot" id="pkp-d1"></div>
+          <div class="pkp-dot" id="pkp-d2"></div>
+          <div class="pkp-dot" id="pkp-d3"></div>
+        </div>
+      </div>
+
+      <div class="pkp-grid">
+        <button class="pkp-btn" onclick="pkpPress('1')">1</button>
+        <button class="pkp-btn" onclick="pkpPress('2')">2</button>
+        <button class="pkp-btn" onclick="pkpPress('3')">3</button>
+        <button class="pkp-btn" onclick="pkpPress('4')">4</button>
+        <button class="pkp-btn" onclick="pkpPress('5')">5</button>
+        <button class="pkp-btn" onclick="pkpPress('6')">6</button>
+        <button class="pkp-btn" onclick="pkpPress('7')">7</button>
+        <button class="pkp-btn" onclick="pkpPress('8')">8</button>
+        <button class="pkp-btn" onclick="pkpPress('9')">9</button>
+      </div>
+      <div class="pkp-bottom-row">
+        <button class="pkp-btn-ok" onclick="pkpTriggerSubmit()">✓</button>
+        <button class="pkp-btn" onclick="pkpPress('0')">0</button>
+        <button class="pkp-btn-del" onclick="pkpDel()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z"/><line x1="18" y1="9" x2="13" y2="14"/><line x1="13" y1="9" x2="18" y2="14"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="pkp-error"></div>
+
+    <div class="pkp-back-link">
+      <a href="index.html">⬅ Kembali ke Menu</a>
+    </div>
+
+    <div id="lg-title" style="display:none">Akses Payroll</div>
+    <div id="lg-setup-fields" style="display:none"></div>
+    <div id="lg-login-fields" style="display:none">
+      <input type="hidden" id="lg-pass-input">
+    </div>
+    <div id="lg-error" style="display:none"></div>
+    <button id="lg-submit-btn" style="display:none"></button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var pkpBuffer = '';
+  var pkpMaxLen = 4;
+  var pkpErrEl = document.getElementById('pkp-error');
+  var pkpDotsWrap = document.getElementById('pkp-dots-wrap');
+
+  function pkpUpdateDots() {
+    var len = pkpBuffer.length;
+    var totalDots = Math.max(4, len);
+    var dotsEl = document.getElementById('pkp-dots');
+    if (dotsEl.children.length !== totalDots) {
+      dotsEl.innerHTML = '';
+      for (var i = 0; i < totalDots; i++) {
+        var d = document.createElement('div');
+        d.className = 'pkp-dot';
+        d.id = 'pkp-d' + i;
+        dotsEl.appendChild(d);
+      }
+    }
+    for (var i = 0; i < totalDots; i++) {
+      var d = document.getElementById('pkp-d' + i);
+      if (d) d.className = 'pkp-dot' + (i < len ? ' filled' : '');
+    }
+  }
+
+  function pkpShowError(msg) {
+    pkpErrEl.textContent = '⚠️ ' + msg;
+    pkpErrEl.style.display = 'block';
+    var dots = document.querySelectorAll('.pkp-dot');
+    dots.forEach(function(d){ d.classList.add('error'); });
+    pkpDotsWrap.classList.add('shake');
+    setTimeout(function(){
+      pkpBuffer = '';
+      var hi = document.getElementById('lg-pass-input');
+      if (hi) hi.value = '';
+      pkpUpdateDots();
+      dots.forEach(function(d){ d.classList.remove('error'); });
+      pkpDotsWrap.classList.remove('shake');
+    }, 600);
+  }
+
+  function pkpHideError() { pkpErrEl.style.display = 'none'; pkpErrEl.textContent = ''; }
+
+  window.pkpPress = function(digit) {
+    if (pkpBuffer.length >= pkpMaxLen) return;
+    pkpHideError();
+    pkpBuffer += digit;
+    pkpUpdateDots();
+    var hi = document.getElementById('lg-pass-input');
+    if (hi) hi.value = pkpBuffer;
+    // Auto-submit setelah 4 digit
+    if (pkpBuffer.length === 4) {
+      setTimeout(function(){ pkpTriggerSubmit(); }, 150);
+    }
+  };
+
+  window.pkpDel = function() {
+    if (!pkpBuffer.length) return;
+    pkpBuffer = pkpBuffer.slice(0, -1);
+    pkpUpdateDots();
+    var hi = document.getElementById('lg-pass-input');
+    if (hi) hi.value = pkpBuffer;
+  };
+
+  // Reset buffer secara penuh (dipanggil dari relockGate saat gate terkunci ulang)
+  window.pkpResetBuffer = function() {
+    pkpBuffer = '';
+    pkpUpdateDots();
+    var hi = document.getElementById('lg-pass-input');
+    if (hi) hi.value = '';
+  };
+
+  window.pkpTriggerSubmit = function() {
+    var hi = document.getElementById('lg-pass-input');
+    if (hi) hi.value = pkpBuffer;
+    if (typeof handleSubmit === 'function') handleSubmit();
+    else document.getElementById('lg-submit-btn').click();
+  };
+
+  window.pkpHandleSetup = function() {
+    pkpHideError();
+    if (typeof handleSubmit === 'function') handleSubmit();
+    else document.getElementById('lg-submit-btn').click();
+  };
+
+  var lgErrorEl = document.getElementById('lg-error');
+  if (lgErrorEl) {
+    var observer = new MutationObserver(function(){
+      if (lgErrorEl.style.display !== 'none' && lgErrorEl.textContent) {
+        pkpShowError(lgErrorEl.textContent.replace('⚠️ ',''));
+        lgErrorEl.style.display = 'none';
+      }
+    });
+    observer.observe(lgErrorEl, { attributes:true, childList:true });
+  }
+
+  document.addEventListener('keydown', function(e){
+    var overlay = document.getElementById('login-gate-overlay');
+    if (!overlay || overlay.style.display === 'none') return;
+    if (e.key >= '0' && e.key <= '9') pkpPress(e.key);
+    else if (e.key === 'Backspace') pkpDel();
+    else if (e.key === 'Enter') pkpTriggerSubmit();
+  });
+
+  pkpUpdateDots();
+
+  var setupEl = document.getElementById('pkp-setup-mode');
+  var loginModeEl = document.getElementById('pkp-login-mode');
+  var lgSetupFields = document.getElementById('lg-setup-fields');
+  if (lgSetupFields) {
+    var setupObserver = new MutationObserver(function(){
+      if (lgSetupFields.style.display !== 'none') {
+        setupEl.classList.add('active');
+        loginModeEl.style.display = 'none';
+      } else {
+        setupEl.classList.remove('active');
+        loginModeEl.style.display = 'block';
+      }
+    });
+    setupObserver.observe(lgSetupFields, { attributes:true });
+  }
+})();
+</script>
+<script>
+(function(){
+  var LG_KEY = 'payroll_password';
+  var lgTitle = document.getElementById('lg-title');
+  var lgSub = document.getElementById('lg-sub');
+  var lgSetupFields = document.getElementById('lg-setup-fields');
+  var lgLoginFields = document.getElementById('lg-login-fields');
+  var lgError = document.getElementById('lg-error');
+  var lgSubmitBtn = document.getElementById('lg-submit-btn');
+  var lgOverlay = document.getElementById('login-gate-overlay');
+  var isSetupMode = false;
+  var isAuthorized = false;
+
+  function showError(msg) {
+    lgError.textContent = '⚠️ ' + msg;
+    lgError.style.display = 'block';
+  }
+  function hideError() { lgError.style.display = 'none'; }
+
+  function unlockGate() {
+    isAuthorized = true;
+    if (lgOverlay) lgOverlay.style.display = 'none';
+  }
+
+  // Kunci lagi HANYA jika aplikasi ditinggal cukup lama (bukan setiap kali fokus berpindah sekejap)
+  // Ubah angka di bawah ini kalau mau durasi toleransi yang berbeda.
+  var LG_RELOCK_AFTER_MS = 5 * 60 * 1000; // 5 menit
+  var lgHiddenAt = null;
+
+  function relockGate() {
+    if (!isAuthorized) return;
+    isAuthorized = false;
+    if (lgOverlay) {
+      lgOverlay.style.display = 'flex';
+      hideError();
+      var passInput = document.getElementById('lg-pass-input');
+      if (passInput) passInput.value = '';
+      var dotsEl = document.getElementById('pkp-dots');
+      if (dotsEl) dotsEl.querySelectorAll('.pkp-dot').forEach(function(d){d.className='pkp-dot';});
+      var pkpErrEl2 = document.getElementById('pkp-error');
+      if (pkpErrEl2) { pkpErrEl2.style.display='none'; pkpErrEl2.textContent=''; }
+      // FIX: benar-benar reset buffer JS, bukan cuma tampilan dots
+      if (typeof window.pkpResetBuffer === 'function') window.pkpResetBuffer();
+    }
+  }
+  // Catat waktu saat aplikasi disembunyikan (pindah tab/app, minimize),
+  // tapi JANGAN langsung kunci — baru kunci kalau sudah ditinggal > LG_RELOCK_AFTER_MS
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) {
+      lgHiddenAt = Date.now();
+    } else if (isAuthorized && lgHiddenAt) {
+      var elapsed = Date.now() - lgHiddenAt;
+      lgHiddenAt = null;
+      if (elapsed > LG_RELOCK_AFTER_MS) relockGate();
+    }
+  });
+  // pagehide tetap langsung kunci (halaman benar-benar ditutup/dibongkar)
+  window.addEventListener('pagehide', relockGate);
+  // NOTE: listener 'blur' DIHAPUS — sebelumnya ini membuat gate terkunci ulang
+  // hanya karena fokus jendela berpindah sebentar (buka keyboard, klik dropdown, dll),
+  // yang membuat password diminta terlalu sering.
+
+  async function initGate() {
+    try {
+      var res = await sb.from('settings').select('value').eq('key', LG_KEY).single();
+      if (res.error || !res.data) {
+        isSetupMode = true;
+        lgTitle.textContent = 'Atur Password Pertama Kali';
+        lgSub.textContent = 'Belum ada password untuk halaman ini. Silakan buat password baru.';
+        lgSetupFields.style.display = 'block';
+        lgLoginFields.style.display = 'none';
+      }
+    } catch(e) {
+      console.error('Login gate init error:', e);
+    }
+  }
+
+  async function handleSubmit() {
+    hideError();
+    if (isSetupMode) {
+      var p1 = document.getElementById('lg-pass-new').value.trim();
+      var p2 = document.getElementById('lg-pass-confirm').value.trim();
+      if (!p1) { showError('Password baru wajib diisi'); return; }
+      if (p1.length !== 4) { showError('PIN harus tepat 4 digit'); return; }
+      if (p1 !== p2) { showError('Konfirmasi password tidak cocok'); return; }
+      try {
+        var { error } = await sb.from('settings').insert({ key: LG_KEY, value: p1 });
+        if (error) throw error;
+        isSetupMode = false;
+        lgSetupFields.style.display = 'none';
+        lgLoginFields.style.display = 'block';
+        unlockGate();
+      } catch(e) {
+        showError('Gagal menyimpan password: ' + (e.message || e));
+      }
+    } else {
+      var pass = document.getElementById('lg-pass-input').value.trim();
+      if (!pass) { showError('Masukkan password'); return; }
+      try {
+        var res = await sb.from('settings').select('value').eq('key', LG_KEY).single();
+        if (res.error || !res.data || res.data.value !== pass) {
+          showError('Password salah. Silakan coba lagi.');
+          document.getElementById('lg-pass-input').value = '';
+          document.getElementById('lg-pass-input').focus();
+          return;
+        }
+        unlockGate();
+      } catch(e) {
+        showError('Gagal memverifikasi: ' + (e.message || e));
+      }
+    }
+  }
+
+  lgSubmitBtn.addEventListener('click', handleSubmit);
+
+  // Pastikan input password tidak ketutup keyboard HP saat fokus
+  ['lg-pass-new','lg-pass-confirm','lg-pass-input'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('focus', function(){
+      setTimeout(function(){
+        el.scrollIntoView({ behavior:'smooth', block:'center' });
+      }, 300);
+    });
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && lgOverlay && lgOverlay.style.display !== 'none') handleSubmit();
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGate);
+  } else {
+    initGate();
+  }
+})();
+</script>
+
+
+<!-- OFFLINE BANNER -->
+<div class="offline-banner" id="offline-banner">📡 Koneksi terputus — data dari cache lokal</div>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-card">
+    <div class="loading-brand-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="6" width="18" height="13" rx="2" stroke="white" stroke-width="1.7"/>
+        <path d="M3 10h18" stroke="white" stroke-width="1.7"/>
+        <path d="M8 14h2M12 14h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="loading-title">Sri Rejeki</div>
+    <div class="loading-sub">Payroll & Absensi</div>
+    <div class="loading-step" id="ls-step">Menghubungkan ke server...</div>
+    <div class="loading-track"><div class="loading-fill" id="ls-bar"></div></div>
+    <div class="loading-pct" id="ls-pct">0%</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <circle cx="9" cy="7" r="4" fill="white" fill-opacity="0.9"/>
+        <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M16 11l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="topbar-title">Payroll</div>
+      <div class="topbar-sub" id="cabang-label">Multi-Cabang</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="network-indicator online" id="net-indicator"></div>
+</div>
+
+<!-- ═══════════ MAIN CONTENT ═══════════ -->
+<div class="main" id="main-content">
+
+  <!-- ═══ TAB 1: ABSENSI ═══ -->
+  <div id="panel-absensi">
+    <div class="summary-row">
+      <div class="sum-card blue"><div class="sum-label">👥 Pegawai</div><div class="sum-val" id="abs-total">0</div><div class="sum-sub">terdaftar</div></div>
+      <div class="sum-card green"><div class="sum-label">✅ Hadir</div><div class="sum-val" id="abs-hadir">0</div><div class="sum-sub">karyawan</div></div>
+      <div class="sum-card red"><div class="sum-label">❌ Alpa</div><div class="sum-val" id="abs-tidak">0</div><div class="sum-sub">karyawan</div></div>
+    </div>
+
+    <div class="date-bar">
+      <label>📅</label>
+      <input type="date" id="abs-date" max="" onchange="this.blur(); loadAbsensi()">
+    </div>
+
+    <div class="abs-shortcuts" id="abs-shortcuts"></div>
+    <div class="abs-status-badge hidden" id="abs-status-badge"></div>
+
+    <div class="roti-card" id="abs-list">
+      <div class="empty-state"><div class="empty-title">📋 Belum ada absensi</div><div class="empty-sub">Pilih tanggal untuk memuat absensi</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 2: KEGIATAN (LEMBUR) ═══ -->
+  <div id="panel-kegiatan" style="display:none">
+    <div class="summary-row">
+      <div class="sum-card orange" style="grid-column:span 3">
+        <div class="sum-label">⏱ Total Lembur Minggu Ini</div>
+        <div class="sum-val" id="keg-total-jam">0j</div>
+        <div class="sum-sub" id="keg-total-peg">0 pegawai</div>
+      </div>
+    </div>
+
+    <!-- ⭐ PANEL DETEKSI LEMBUR OTOMATIS -->
+    <div id="panel-lembur-pending" style="display:none">
+      <div class="lembur-pending-card">
+        <div class="lembur-pending-header">
+          ⚠️ Deteksi Lembur Otomatis — Menunggu Konfirmasi Admin
+        </div>
+        <div id="lembur-pending-list"></div>
+      </div>
+    </div>
+
+    <div class="lembur-form">
+      <div class="lf-title">📝 Input Lembur</div>
+      <div class="form-group">
+        <label>Nama Pegawai</label>
+        <div class="custom-select-wrap full">
+          <input type="hidden" id="lembur-pegawai-select" value="">
+          <button type="button" class="custom-select-btn" id="lembur-pegawai-select-btn" onclick="toggleCustomSelect('lembur-pegawai-select')">
+            <span id="lembur-pegawai-select-label">— Pilih Pegawai —</span><span class="caret">▼</span>
+          </button>
+          <div class="custom-select-dropdown" id="lembur-pegawai-select-dropdown"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Jam Lembur</label><input type="number" id="lembur-jam" min="0.5" step="0.5" placeholder="0.5"></div>
+        <div class="form-group"><label>Tanggal</label><input type="date" id="lembur-tanggal"></div>
+      </div>
+      <input type="hidden" id="lembur-edit-id" value="">
+      <button class="btn-simpan-lembur" id="btn-simpan-lembur" onclick="simpanLembur()">💾 Tambah Lembur</button>
+      <button class="btn-simpan-lembur" id="btn-batal-lembur" onclick="batalEditLembur()" style="display:none;background:var(--border);color:var(--text);margin-top:6px">✕ Batal Edit</button>
+    </div>
+
+    <div class="roti-card" id="lembur-list">
+      <div class="empty-state"><div class="empty-title">📋 Belum ada data lembur</div><div class="empty-sub">Input lembur di atas</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 3: REKAP PEGAWAI ═══ -->
+  <div id="panel-rekap" style="display:none">
+    <div class="summary-row">
+      <div class="sum-card blue" style="grid-column:span 2">
+        <div class="sum-label">💰 Total Gaji Periode</div>
+        <div class="sum-val" id="rek-total-gaji" style="font-size:20px">Rp 0</div>
+        <div class="sum-sub" id="rek-total-sub">0 pegawai · 0 hari kerja</div>
+      </div>
+      <div class="sum-card green">
+        <div class="sum-label">📅 Hari Kerja</div>
+        <div class="sum-val" id="rek-hari-kerja">0</div>
+        <div class="sum-sub">hari</div>
+      </div>
+    </div>
+
+    <div id="rekap-pills" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="rekap-pill active" data-pill="periode-ini" id="pill-periode-ini" onclick="setRekapPill(this)">Periode Ini</button>
+      <button class="rekap-pill" data-pill="periode-lalu" id="pill-periode-lalu" onclick="setRekapPill(this)">Periode Lalu</button>
+    </div>
+    <div id="rek-periode-label" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;text-align:center"></div>
+
+    <div class="roti-card" id="rekap-list">
+      <div class="empty-state">
+        <div class="empty-title">📊 Belum ada data rekap</div>
+        <div class="empty-sub">Pilih periode untuk melihat rekap</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 4: PEGAWAI ═══ -->
+  <div id="panel-pegawai" style="display:none">
+    <div class="summary-row">
+      <div class="sum-card blue"><div class="sum-label">👥 Total</div><div class="sum-val" id="peg-total">0</div><div class="sum-sub">pegawai</div></div>
+      <div class="sum-card green" style="grid-column:span 2"><div class="sum-label">Aktif</div><div class="sum-val" id="peg-aktif">0</div><div class="sum-sub">pegawai aktif</div></div>
+    </div>
+
+    <div class="peg-form" id="peg-form">
+      <div class="pf-title" id="peg-form-title">➕ Tambah Pegawai</div>
+      <input type="hidden" id="peg-edit-id">
+      <div class="peg-form-row">
+        <div class="form-group"><label>Nama *</label><input type="text" id="peg-nama" placeholder="Nama lengkap..." style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()"></div>
+        <div class="form-group"><label>Bagian</label>
+          <div class="custom-select-wrap full">
+            <input type="hidden" id="peg-bagian-select" value="">
+            <button type="button" class="custom-select-btn" id="peg-bagian-select-btn" onclick="toggleCustomSelect('peg-bagian-select')">
+              <span id="peg-bagian-select-label">— Pilih —</span><span class="caret">▼</span>
+            </button>
+            <div class="custom-select-dropdown" id="peg-bagian-select-dropdown"></div>
+          </div>
+        </div>
+      </div>
+      <div class="peg-form-row">
+        <div class="form-group"><label>Gaji Harian (Rp)</label><input type="text" id="peg-gaji" placeholder="Rp 0" readonly></div>
+        <div class="form-group"><label>Lembur/jam</label><input type="text" id="peg-lembur" placeholder="Rp 0" readonly></div>
+      </div>
+      <div class="peg-form-row" style="align-items:end">
+        <div class="form-group"><label>Status</label>
+          <div class="custom-select-wrap full">
+            <input type="hidden" id="peg-status" value="true">
+            <button type="button" class="custom-select-btn" id="peg-status-btn" onclick="toggleCustomSelect('peg-status')">
+              <span id="peg-status-label">Aktif</span><span class="caret">▼</span>
+            </button>
+            <div class="custom-select-dropdown" id="peg-status-dropdown">
+              <div class="custom-option selected" data-val="true" onclick="selectCustomOption('peg-status','true','Aktif')">Aktif</div>
+              <div class="custom-option" data-val="false" onclick="selectCustomOption('peg-status','false','Nonaktif')">Nonaktif</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-simpan-peg" onclick="simpanPegawai()" style="flex:2;min-width:100px">💾 Simpan</button>
+          <button class="btn-hapus-peg" id="btn-hapus-peg" onclick="hapusPegawai()" style="display:none;flex:1;min-width:80px">🗑️ Hapus</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="roti-card" id="peg-list">
+      <div class="empty-state"><div class="empty-title">👤 Belum ada pegawai</div><div class="empty-sub">Tambahkan pegawai di atas</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 5: SETTING ═══ -->
+<div id="panel-setting" style="display:none">
+  
+  <!-- ========================================================== -->
+  <!-- 1. PENGATURAN PAYROLL                                      -->
+  <!-- ========================================================== -->
+  <div class="setting-group open">
+    <div class="sg-header" onclick="toggleSettingGroup(this)">
+      <div class="sg-title">⚙️ Pengaturan Payroll</div>
+      <span class="sg-arrow">▼</span>
+    </div>
+    <div class="sg-body">
+      <div class="setting-row">
+        <span class="label">Periode Gaji</span>
+        <div class="custom-select-wrap">
+          <button class="custom-select-btn" id="sel-periode-btn" onclick="toggleDropdown('periode')">
+            <span id="sel-periode-label">Mingguan</span><span class="caret">▼</span>
+          </button>
+          <div class="custom-select-dropdown" id="sel-periode-dropdown">
+            <div class="custom-option selected" data-val="mingguan" onclick="setSetting('periode','mingguan','Mingguan')">Mingguan</div>
+            <div class="custom-option" data-val="bulanan" onclick="setSetting('periode','bulanan','Bulanan')">Bulanan</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="setting-row">
+        <span class="label">Hari Gajian</span>
+        <div class="custom-select-wrap">
+          <button class="custom-select-btn" id="sel-hari-btn" onclick="toggleDropdown('hari')">
+            <span id="sel-hari-label">Kamis</span><span class="caret">▼</span>
+          </button>
+          <div class="custom-select-dropdown" id="sel-hari-dropdown">
+            <div class="custom-option" data-val="0" onclick="setSetting('hari_gajian',0,'Minggu')">Minggu</div>
+            <div class="custom-option" data-val="1" onclick="setSetting('hari_gajian',1,'Senin')">Senin</div>
+            <div class="custom-option" data-val="2" onclick="setSetting('hari_gajian',2,'Selasa')">Selasa</div>
+            <div class="custom-option" data-val="3" onclick="setSetting('hari_gajian',3,'Rabu')">Rabu</div>
+            <div class="custom-option selected" data-val="4" onclick="setSetting('hari_gajian',4,'Kamis')">Kamis</div>
+            <div class="custom-option" data-val="5" onclick="setSetting('hari_gajian',5,'Jumat')">Jumat</div>
+            <div class="custom-option" data-val="6" onclick="setSetting('hari_gajian',6,'Sabtu')">Sabtu</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="setting-row">
+        <span class="label">Hari Libur</span>
+        <div class="custom-select-wrap">
+          <button class="custom-select-btn" id="sel-libur-btn" onclick="toggleDropdown('libur')">
+            <span id="sel-libur-label">Jumat</span><span class="caret">▼</span>
+          </button>
+          <div class="custom-select-dropdown" id="sel-libur-dropdown">
+            <div class="custom-option" data-val="0" onclick="setSetting('hari_libur',0,'Minggu')">Minggu</div>
+            <div class="custom-option" data-val="1" onclick="setSetting('hari_libur',1,'Senin')">Senin</div>
+            <div class="custom-option" data-val="2" onclick="setSetting('hari_libur',2,'Selasa')">Selasa</div>
+            <div class="custom-option" data-val="3" onclick="setSetting('hari_libur',3,'Rabu')">Rabu</div>
+            <div class="custom-option" data-val="4" onclick="setSetting('hari_libur',4,'Kamis')">Kamis</div>
+            <div class="custom-option selected" data-val="5" onclick="setSetting('hari_libur',5,'Jumat')">Jumat</div>
+            <div class="custom-option" data-val="6" onclick="setSetting('hari_libur',6,'Sabtu')">Sabtu</div>
+          </div>
+        </div>
+      </div>
+      
+      <button class="btn-setting-save" onclick="simpanSettings()">💾 Simpan Pengaturan</button>
+      <span class="setting-status" id="setting-status">✅ Dimuat</span>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- 2. JAM OPERASIONAL ABSENSI                                 -->
+  <!-- ========================================================== -->
+  <div class="setting-group" id="setting-jam-group">
+    <div class="sg-header" onclick="toggleSettingGroup(this)">
+      <div class="sg-title">⏰ Jam Operasional Absensi</div>
+      <span class="sg-arrow">▼</span>
+    </div>
+    <div class="sg-body">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        Atur jam kapan pegawai bisa melakukan absensi
+      </div>
+      
+      <div class="setting-row">
+        <span class="label">Jam Buka</span>
+        <div style="min-width:130px;">
+          <input type="time" id="setting-jam-buka" value="07:00" 
+                 style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);">
+        </div>
+      </div>
+      
+      <div class="setting-row">
+        <span class="label">Jam Tutup</span>
+        <div style="min-width:130px;">
+          <input type="time" id="setting-jam-tutup" value="09:00"
+                 style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);">
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn-setting-save" id="btn-simpan-jam" onclick="simpanJamOperasional()" style="flex:1;min-width:200px;">
+          💾 Simpan Jam Operasional
+        </button>
+        <button class="btn-setting-save" id="btn-reset-jam" onclick="resetJamOperasional()" style="flex:0;background:var(--border);color:var(--text);min-width:100px;">
+          ↺ Reset
+        </button>
+      </div>
+      <span class="setting-status" id="status-jam">✅ Dimuat</span>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- 2b. JAM OPERASIONAL ABSEN PULANG                           -->
+  <!-- ========================================================== -->
+  <div class="setting-group" id="setting-jam-pulang-group">
+    <div class="sg-header" onclick="toggleSettingGroup(this)">
+      <div class="sg-title">🚪 Jam Operasional Absen Pulang</div>
+      <span class="sg-arrow">▼</span>
+    </div>
+    <div class="sg-body">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        Atur jam kapan pegawai bisa absen pulang (terpisah dari jam absen masuk)
+      </div>
+
+      <div class="setting-row">
+        <span class="label">Jam Buka</span>
+        <div style="min-width:130px;">
+          <input type="time" id="setting-jam-pulang-buka" value="16:00"
+                 style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);">
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="label">Jam Tutup</span>
+        <div style="min-width:130px;">
+          <input type="time" id="setting-jam-pulang-tutup" value="18:00"
+                 style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn-setting-save" id="btn-simpan-jam-pulang" onclick="simpanJamOperasionalPulang()" style="flex:1;min-width:200px;">
+          💾 Simpan Jam Pulang
+        </button>
+        <button class="btn-setting-save" id="btn-reset-jam-pulang" onclick="resetJamOperasionalPulang()" style="flex:0;background:var(--border);color:var(--text);min-width:100px;">
+          ↺ Reset
+        </button>
+      </div>
+      <span class="setting-status" id="status-jam-pulang">✅ Dimuat</span>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- 2c. JAM KERJA (untuk deteksi lembur otomatis)             -->
+  <!-- ========================================================== -->
+  <div class="setting-group" id="setting-jam-kerja-group">
+    <div class="sg-header" onclick="toggleSettingGroup(this)">
+      <div class="sg-title">🏢 Jam Kerja (Deteksi Lembur Otomatis)</div>
+      <span class="sg-arrow">▼</span>
+    </div>
+    <div class="sg-body">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        Atur jam kerja resmi. Jika pegawai pulang melebihi jam selesai, sistem akan mendeteksi lembur secara otomatis (dibulatkan ke jam penuh, minimal 1 jam).
+      </div>
+
+      <div class="setting-row">
+        <span class="label">Jam Mulai Kerja</span>
+        <div style="min-width:130px;">
+          <input type="time" id="setting-jam-kerja-mulai" value="08:00"
+                 style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);">
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="label">Jam Selesai Kerja</span>
+        <div style="min-width:130px;">
+          <input type="time" id="setting-jam-kerja-selesai" value="17:00"
+                 style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--bg);">
+        </div>
+      </div>
+
+      <div style="background:#fff8e6;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:11.5px;color:#92400e;line-height:1.6;">
+        <b>📌 Aturan deteksi lembur:</b><br>
+        • Lembur dihitung jika pulang <b>≥ 1 jam</b> setelah jam selesai kerja<br>
+        • Dibulatkan ke jam penuh (misal: 17:50 → 0 jam, 18:05 → 1 jam, 19:30 → 2 jam)<br>
+        • Admin bisa <b>edit/sesuaikan jam</b> sebelum menyimpan ke data lembur
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn-setting-save" id="btn-simpan-jam-kerja" onclick="simpanJamKerja()" style="flex:1;min-width:200px;">
+          💾 Simpan Jam Kerja
+        </button>
+        <button class="btn-setting-save" id="btn-reset-jam-kerja" onclick="resetJamKerja()" style="flex:0;background:var(--border);color:var(--text);min-width:100px;">
+          ↺ Reset
+        </button>
+      </div>
+      <span class="setting-status" id="status-jam-kerja">✅ Dimuat</span>
+    </div>
+  </div>
+
+  <!-- ========================================================== -->
+  <!-- 3. KELOLA BAGIAN                                           -->
+  <!-- ========================================================== -->
+  <div class="setting-group">
+    <div class="sg-header" onclick="toggleSettingGroup(this)">
+      <div class="sg-title">🏷️ Kelola Bagian</div>
+      <span class="sg-arrow">▼</span>
+    </div>
+    <div class="sg-body">
+      <div class="bagian-form-row">
+        <input type="text" id="bagian-nama" placeholder="Nama Bagian" style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()">
+        <input type="text" id="bagian-gaji" placeholder="Gaji Harian" inputmode="numeric" oninput="formatRupiahInput(this)" data-raw="0">
+        <input type="text" id="bagian-lembur" placeholder="Lembur/jam" inputmode="numeric" oninput="formatRupiahInput(this)" data-raw="0">
+      </div>
+      <button class="btn-setting-save" onclick="simpanBagian()" style="margin-top:4px">➕ Tambah Bagian</button>
+      <div id="bagian-list" style="margin-top:10px"></div>
+    </div>
+  </div>
+  
+</div>
+
+<!-- ═══════════ DASHBOARD BAR (di atas Navbar) ═══════════ -->
+<div class="dashboard-bar">
+  <a href="index.html" class="dashboard-bar-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Kembali ke Dashboard
+  </a>
+</div>
+
+<!-- ═══════════ NAVBAR BAWAH ═══════════ -->
+<div class="bottom-nav">
+  <button class="nav-btn active" data-tab="absensi" onclick="switchTab('absensi')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 15l2 2 4-4"/></svg><span>Absensi</span>
+  </button>
+  <button class="nav-btn" data-tab="kegiatan" onclick="switchTab('kegiatan')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Kegiatan</span>
+  </button>
+  <button class="nav-btn" data-tab="rekap" onclick="switchTab('rekap')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L8.5 13L12.5 17L17 10L24 20H4Z"/></svg><span>Rekap</span>
+  </button>
+  <button class="nav-btn" data-tab="pegawai" onclick="switchTab('pegawai')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"/><path d="M3 20c0-3.3 2.7-6 6-6h0c3.3 0 6 2.7 6 6" stroke-linecap="round"/><path d="M19 8v6M22 11h-6"/></svg><span>Pegawai</span>
+  </button>
+  <button class="nav-btn" data-tab="setting" onclick="switchTab('setting')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg><span>Setting</span>
+  </button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// SUPABASE
+// ============================================================
+let sb = null;
+try {
+  if (typeof supabase === 'undefined') throw new Error('Library Supabase gagal dimuat');
+  sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+} catch (e) { console.error('Supabase init error:', e); }
+
+// ============================================================
+// STATE
+// ============================================================
+let allPegawai = [];
+let absCache = {};
+let lemburCache = [];
+let bagianList = [];
+let absDirty = false;
+let editAbsDate = '';
+let absLockOverride = new Set(); // id pegawai yang sudah Hadir tapi sengaja di-unlock admin untuk diubah
+let payrollSettings = {};
+let selectedCabangId = null;
+let isOnline = navigator.onLine;
+
+// ============================================================
+// NETWORK MONITORING
+// ============================================================
+function updateNetworkStatus(online) {
+  isOnline = online;
+  const indicator = document.getElementById('net-indicator');
+  const banner = document.getElementById('offline-banner');
+  if (online) {
+    indicator.className = 'network-indicator online';
+    banner.classList.remove('show');
+  } else {
+    indicator.className = 'network-indicator offline';
+    banner.classList.add('show');
+    showToast('📡 Mode offline — data dari cache', 'warn');
+  }
+}
+window.addEventListener('online', () => {
+  updateNetworkStatus(true);
+  setTimeout(() => {
+    if (document.getElementById('panel-absensi').style.display !== 'none') loadAbsensi();
+    if (document.getElementById('panel-kegiatan').style.display !== 'none') { loadLembur(); populateLemburSelect(); }
+    if (document.getElementById('panel-rekap').style.display !== 'none') loadRekap();
+  }, 1000);
+});
+window.addEventListener('offline', () => { updateNetworkStatus(false); });
+
+// ============================================================
+// LOCAL CACHE HELPERS
+// ============================================================
+function saveCache(key, data) {
+  try {
+    const payload = { data, timestamp: Date.now(), cabang: selectedCabangId };
+    localStorage.setItem('payroll_cache_' + key, JSON.stringify(payload));
+  } catch (e) { console.warn('Cache save error:', e); }
+}
+function getCache(key) {
+  try {
+    const raw = localStorage.getItem('payroll_cache_' + key);
+    if (!raw) return null;
+    const payload = JSON.parse(raw);
+    if (Date.now() - payload.timestamp > 86400000) { localStorage.removeItem('payroll_cache_' + key); return null; }
+    return payload.data;
+  } catch (e) { return null; }
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function toStr(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function todayStr() { return toStr(new Date()); }
+
+// ============================================================
+// ABSENSI MANUAL — Shortcut 6 Hari Kerja & Status Badge
+// ============================================================
+async function renderAbsShortcuts() {
+  const container = document.getElementById('abs-shortcuts');
+  if (!container) return;
+
+  const hariLibur = payrollSettings.hari_libur ?? 5; // default Jumat
+  const today = new Date();
+
+  // Kumpulkan 6 hari kerja terakhir (skip hari libur)
+  const workDays = [];
+  let cursor = new Date(today);
+  while (workDays.length < 6) {
+    if (cursor.getDay() !== hariLibur) {
+      workDays.push(new Date(cursor));
+    }
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  // Cek tanggal mana yang sudah ada data absensi
+  const oldest = toStr(workDays[workDays.length - 1]);
+  const newest = toStr(workDays[0]);
+  let filledDates = new Set();
+  try {
+    const { data } = await sb.from('absensi')
+      .select('tanggal')
+      .gte('tanggal', oldest)
+      .lte('tanggal', newest);
+    (data || []).forEach(r => filledDates.add(r.tanggal));
+  } catch(e) {}
+
+  const selectedDate = document.getElementById('abs-date').value;
+  const namaHari = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+
+  container.innerHTML = workDays.map((d, i) => {
+    const ds = toStr(d);
+    const isFilled = filledDates.has(ds);
+    const isActive = ds === selectedDate;
+    const isToday = i === 0;
+    const label = isToday ? 'Hari ini' : i === 1 ? 'Kemarin' : namaHari[d.getDay()];
+    const tgl = ds.slice(5).replace('-','/');
+    return `<button class="abs-shortcut-btn${isActive ? ' active' : ''}"
+      onclick="setAbsDate('${ds}')">
+      <span>${label}</span>
+      <span class="sc-label">${tgl}</span>
+      <span class="sc-status ${isFilled ? 'filled' : 'empty'}">${isFilled ? '✅ Ada data' : '⚠️ Belum'}</span>
+    </button>`;
+  }).join('');
+}
+
+function setAbsDate(dateStr) {
+  const input = document.getElementById('abs-date');
+  input.value = dateStr;
+  // Update active state shortcut
+  document.querySelectorAll('.abs-shortcut-btn').forEach(btn => {
+    const match = btn.getAttribute('onclick')?.includes(dateStr);
+    btn.classList.toggle('active', !!match);
+  });
+  loadAbsensi();
+}
+
+function updateAbsStatusBadge(hadir) {
+  const badge = document.getElementById('abs-status-badge');
+  if (!badge) return;
+  const date = document.getElementById('abs-date').value;
+  if (!date) { badge.className = 'abs-status-badge hidden'; return; }
+  if (hadir > 0) {
+    badge.className = 'abs-status-badge filled';
+    badge.innerHTML = `✅ Absensi ${date} sudah diisi — ${hadir} hadir`;
+  } else {
+    badge.className = 'abs-status-badge empty';
+    badge.innerHTML = `⚠️ Absensi ${date} belum ada data — silakan isi sekarang`;
+  }
+}
+function rp(n) { if (n == null || isNaN(n)) return 'Rp 0'; return 'Rp ' + Math.round(n).toLocaleString('id'); }
+// Pastikan nama (& jabatan) selalu tampil HURUF BESAR walaupun data lama tersimpan campuran besar/kecil.
+function upperNamaList(list) {
+  (list || []).forEach(o => { if (o && typeof o.nama === 'string') o.nama = o.nama.toUpperCase(); });
+  return list || [];
+}
+function upperJabatanList(list) {
+  (list || []).forEach(o => { if (o && typeof o.jabatan === 'string') o.jabatan = o.jabatan.toUpperCase(); });
+  return list || [];
+}
+
+function formatRupiahInput(el) {
+  const raw = el.value.replace(/[^\d]/g, '');
+  const num = parseInt(raw, 10) || 0;
+  el.dataset.raw = num;
+  if (raw === '') { el.value = ''; el.dataset.raw = '0'; return; }
+  el.value = 'Rp ' + num.toLocaleString('id');
+  setTimeout(() => { el.selectionStart = el.selectionEnd = el.value.length; }, 0);
+}
+function setRupiahInput(id, num) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const n = parseFloat(num) || 0;
+  el.dataset.raw = n;
+  if (!num && num !== 0) { el.value = ''; el.dataset.raw = '0'; return; }
+  el.value = n > 0 ? 'Rp ' + Math.round(n).toLocaleString('id') : '';
+}
+
+const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+function toggleDropdown(type) {
+  const btn = document.getElementById('sel-' + type + '-btn');
+  const dd = document.getElementById('sel-' + type + '-dropdown');
+  const isOpen = dd.classList.contains('open');
+  document.querySelectorAll('.custom-select-dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.custom-select-btn.open').forEach(b => b.classList.remove('open'));
+  if (!isOpen) { dd.classList.add('open'); btn.classList.add('open'); }
+}
+
+function toggleSettingGroup(headerEl) {
+  const group = headerEl.closest('.setting-group');
+  group.classList.toggle('open');
+}
+
+function setSetting(key, val, label) {
+  if (key === 'periode') document.getElementById('sel-periode-label').textContent = label;
+  else if (key === 'hari_gajian') document.getElementById('sel-hari-label').textContent = label;
+  else if (key === 'hari_libur') document.getElementById('sel-libur-label').textContent = label;
+  const dd = document.getElementById('sel-' + (key === 'periode' ? 'periode' : key === 'hari_gajian' ? 'hari' : 'libur') + '-dropdown');
+  if (dd) {
+    dd.querySelectorAll('.custom-option').forEach(o => { o.classList.toggle('selected', o.dataset.val == val); });
+    dd.classList.remove('open');
+    const btn = document.getElementById('sel-' + (key === 'periode' ? 'periode' : key === 'hari_gajian' ? 'hari' : 'libur') + '-btn');
+    if (btn) btn.classList.remove('open');
+  }
+  payrollSettings[key] = val;
+  document.getElementById('setting-status').textContent = '⚠️ Belum disimpan';
+}
+
+function toggleCustomSelect(id) {
+  const btn = document.getElementById(id + '-btn');
+  const dd = document.getElementById(id + '-dropdown');
+  if (!btn || !dd) return;
+  const isOpen = dd.classList.contains('open');
+  closeAllCustomSelects();
+  if (!isOpen) { dd.classList.add('open'); btn.classList.add('open'); }
+}
+function closeAllCustomSelects() {
+  document.querySelectorAll('.custom-select-dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.custom-select-btn.open').forEach(b => b.classList.remove('open'));
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.custom-select-wrap')) closeAllCustomSelects();
+});
+
+function selectCustomOption(id, val, label, extraData) {
+  const hidden = document.getElementById(id);
+  if (!hidden) return;
+  const labelEl = document.getElementById(id + '-label');
+  const dd = document.getElementById(id + '-dropdown');
+  const btn = document.getElementById(id + '-btn');
+  hidden.value = val;
+  Object.keys(hidden.dataset).forEach(k => delete hidden.dataset[k]);
+  if (extraData) Object.keys(extraData).forEach(k => hidden.dataset[k] = extraData[k]);
+  if (labelEl) labelEl.textContent = label;
+  if (dd) dd.querySelectorAll('.custom-option').forEach(o => o.classList.toggle('selected', String(o.dataset.val) === String(val)));
+  if (dd) dd.classList.remove('open');
+  if (btn) btn.classList.remove('open');
+  hidden.dispatchEvent(new Event('change'));
+}
+
+function showConfirm({ icon = '⚠️', title = 'Konfirmasi', msg = '', okLabel = 'Ya', okColor = 'var(--danger)' } = {}) {
+  return new Promise(resolve => {
+    document.getElementById('confirm-icon').textContent = icon;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent = msg;
+    const okBtn = document.getElementById('confirm-ok-btn');
+    okBtn.textContent = okLabel;
+    okBtn.style.background = okColor;
+    document.getElementById('confirm-overlay').classList.add('open');
+    window._confirmResolve = resolve;
+  });
+}
+function resolveConfirm(val) {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  if (window._confirmResolve) { window._confirmResolve(val); window._confirmResolve = null; }
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  const icon = type === 'error' ? '✕ ' : type === 'warn' ? '⚠ ' : '✓ ';
+  t.textContent = icon + msg;
+  t.className = 'toast show';
+  clearTimeout(window._tt);
+  window._tt = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function setLoading(show, btnId = null) {
+  if (btnId) {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.disabled = show;
+      btn.textContent = show ? '⏳ ...' : btn.dataset.original || 'Muat';
+    }
+    return;
+  }
+  const btns = document.querySelectorAll('.btn-load, .btn-save, .btn-setting-save, .btn-simpan-lembur, .btn-simpan-peg, .btn-hapus-peg');
+  btns.forEach(b => {
+    if (b) {
+      if (!b.dataset.original) b.dataset.original = b.textContent || 'Muat';
+      b.disabled = show;
+      if (show && !b.id?.includes('save') && !b.id?.includes('simpan')) {
+        b.textContent = '⏳ ...';
+      } else if (!show) {
+        b.textContent = b.dataset.original || 'Muat';
+      }
+    }
+  });
+}
+
+const AVATAR_BG = ['#e3f9f5', '#fff8e6', '#eef2ff', '#fff0f6', '#e6f9ef', '#fdeaec', '#f0f4ff', '#fff3e0'];
+const AVATAR_FG = ['#0b756c', '#92400e', '#3730a3', '#9d174d', '#087a46', '#c0344c', '#3b5bdb', '#c76c00'];
+function avatarColors(i) { return { bg: AVATAR_BG[i % AVATAR_BG.length], fg: AVATAR_FG[i % AVATAR_FG.length] }; }
+
+// ============================================================
+// SWITCH TAB (dengan scroll ke atas)
+// ============================================================
+function switchTab(name) {
+  ['absensi', 'kegiatan', 'rekap', 'pegawai', 'setting'].forEach(id => {
+    document.getElementById('panel-' + id).style.display = 'none';
+  });
+  document.getElementById('panel-' + name).style.display = 'block';
+
+  document.querySelectorAll('.bottom-nav .nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+
+  if (name === 'absensi') { renderAbsShortcuts(); }
+
+  // SCROLL KE ATAS
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (name === 'kegiatan') { loadLembur(); populateLemburSelect(); deteksiLemburOtomatis(); }
+  if (name === 'pegawai') { renderPegawai(); populateBagianSelect(); }
+  if (name === 'setting') { loadBagian(); }
+  if (name === 'rekap') { updateRekapPillLabels(); loadRekap(); }
+}
+
+// ============================================================
+// PAYROLL SETTINGS
+// ============================================================
+async function getPayrollSettings() {
+  if (!selectedCabangId) return { periode_gaji: 'mingguan', hari_gajian: 4, hari_libur: 5 };
+  const cached = getCache('settings_' + selectedCabangId);
+  if (cached && !isOnline) return cached;
+  try {
+    const { data, error } = await sb.from('payroll_settings').select('*').eq('cabang_id', selectedCabangId).maybeSingle();
+    if (error || !data) {
+      const fallback = { periode_gaji: 'mingguan', hari_gajian: 4, hari_libur: 5 };
+      if (cached) return cached;
+      return fallback;
+    }
+    saveCache('settings_' + selectedCabangId, data);
+    return data;
+  } catch (e) {
+    if (cached) return cached;
+    return { periode_gaji: 'mingguan', hari_gajian: 4, hari_libur: 5 };
+  }
+}
+
+async function loadPayrollSettings() {
+  payrollSettings = await getPayrollSettings();
+  const peri = payrollSettings.periode_gaji || 'mingguan';
+  document.getElementById('sel-periode-label').textContent = peri === 'mingguan' ? 'Mingguan' : 'Bulanan';
+  document.getElementById('sel-periode-dropdown').querySelectorAll('.custom-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.val === peri);
+  });
+  const hariG = payrollSettings.hari_gajian ?? 4;
+  document.getElementById('sel-hari-label').textContent = HARI[hariG] || 'Kamis';
+  document.getElementById('sel-hari-dropdown').querySelectorAll('.custom-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.val == hariG);
+  });
+  const hariL = payrollSettings.hari_libur ?? 5;
+  document.getElementById('sel-libur-label').textContent = HARI[hariL] || 'Jumat';
+  document.getElementById('sel-libur-dropdown').querySelectorAll('.custom-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.val == hariL);
+  });
+  document.getElementById('setting-status').textContent = '✅ Dimuat';
+  updateRekapPillLabels();
+}
+
+async function simpanSettings() {
+  if (!selectedCabangId) { showToast('Pilih cabang', 'warn'); return; }
+  setLoading(true);
+  try {
+    const payload = {
+      cabang_id: selectedCabangId,
+      periode_gaji: payrollSettings.periode_gaji || 'mingguan',
+      hari_gajian: payrollSettings.hari_gajian ?? 4,
+      hari_libur: payrollSettings.hari_libur ?? 5,
+      updated_at: new Date().toISOString()
+    };
+    const { data: existing } = await sb.from('payroll_settings').select('id').eq('cabang_id', selectedCabangId).maybeSingle();
+    let error;
+    if (existing) {
+      ({ error } = await sb.from('payroll_settings').update(payload).eq('id', existing.id));
+    } else {
+      ({ error } = await sb.from('payroll_settings').insert(payload));
+    }
+    if (error) throw error;
+    saveCache('settings_' + selectedCabangId, payload);
+    document.getElementById('setting-status').textContent = '✅ Disimpan';
+    showToast('Pengaturan disimpan');
+    await loadPayrollSettings();
+  } catch (e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+// ============================================================
+// FUNGSI JAM OPERASIONAL
+// ============================================================
+
+async function loadJamOperasional() {
+  if (!selectedCabangId) {
+    console.warn('⚠️ Cabang belum dipilih');
+    return;
+  }
+  
+  try {
+    console.log('📥 Load jam operasional untuk cabang:', selectedCabangId);
+    
+    const { data, error } = await sb
+      .from('settings')
+      .select('value')
+      .eq('key', 'jam_operasional')
+      .eq('cabang_id', selectedCabangId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    const statusEl = document.getElementById('status-jam');
+    
+    if (data && data.value) {
+      let jam;
+      try {
+        jam = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      } catch(e) {
+        jam = { buka: '07:00', tutup: '09:00' };
+      }
+      
+      document.getElementById('setting-jam-buka').value = jam.buka || '07:00';
+      document.getElementById('setting-jam-tutup').value = jam.tutup || '09:00';
+      statusEl.textContent = `✅ Dimuat (${jam.buka} - ${jam.tutup})`;
+      statusEl.style.color = 'var(--success)';
+      console.log('✅ Jam loaded:', jam);
+    } else {
+      // Default
+      document.getElementById('setting-jam-buka').value = '07:00';
+      document.getElementById('setting-jam-tutup').value = '09:00';
+      statusEl.textContent = '✅ Default (07:00 - 09:00)';
+      statusEl.style.color = 'var(--text-muted)';
+    }
+  } catch (e) {
+    console.error('❌ Load jam error:', e);
+    document.getElementById('status-jam').textContent = '⚠️ Gagal memuat: ' + (e.message || 'Unknown');
+    document.getElementById('status-jam').style.color = 'var(--danger)';
+  }
+}
+
+async function simpanJamOperasional() {
+  const btn = document.getElementById('btn-simpan-jam');
+  const statusEl = document.getElementById('status-jam');
+  
+  const buka = document.getElementById('setting-jam-buka').value;
+  const tutup = document.getElementById('setting-jam-tutup').value;
+  
+  // Validasi
+  if (!buka || !tutup) {
+    statusEl.textContent = '⚠️ Jam buka dan tutup wajib diisi!';
+    statusEl.style.color = 'var(--danger)';
+    showToast('Jam buka dan tutup wajib diisi', 'error');
+    return;
+  }
+  
+  if (buka >= tutup) {
+    statusEl.textContent = '⚠️ Jam buka harus lebih awal dari jam tutup!';
+    statusEl.style.color = 'var(--danger)';
+    showToast('Jam buka harus lebih awal dari jam tutup!', 'error');
+    return;
+  }
+  
+  if (!selectedCabangId) {
+    statusEl.textContent = '⚠️ Cabang belum dipilih!';
+    statusEl.style.color = 'var(--danger)';
+    showToast('Cabang belum dipilih', 'error');
+    return;
+  }
+  
+  // Disable button
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyimpan...';
+  statusEl.textContent = '⏳ Menyimpan...';
+  statusEl.style.color = 'var(--text-muted)';
+  
+  try {
+    const payload = {
+      cabang_id: selectedCabangId,
+      key: 'jam_operasional',
+      value: JSON.stringify({ buka, tutup }),
+      updated_at: new Date().toISOString()
+    };
+    
+    // Cek apakah sudah ada
+    const { data: existing } = await sb
+      .from('settings')
+      .select('id')
+      .eq('key', 'jam_operasional')
+      .eq('cabang_id', selectedCabangId)
+      .maybeSingle();
+    
+    let error;
+    if (existing) {
+      console.log('🔄 Update existing:', existing.id);
+      ({ error } = await sb
+        .from('settings')
+        .update(payload)
+        .eq('id', existing.id));
+    } else {
+      console.log('➕ Insert new');
+      ({ error } = await sb
+        .from('settings')
+        .insert(payload));
+    }
+    
+    if (error) throw error;
+    
+    // Success
+    statusEl.textContent = `✅ Disimpan! Buka: ${buka} - Tutup: ${tutup}`;
+    statusEl.style.color = 'var(--success)';
+    showToast(`✅ Jam operasional disimpan: ${buka} - ${tutup}`, 'success');
+    
+    // Hapus cache
+    localStorage.removeItem('payroll_cache_jam_operasional_' + selectedCabangId);
+    
+  } catch (e) {
+    console.error('❌ Simpan jam error:', e);
+    statusEl.textContent = '❌ Gagal: ' + (e.message || 'Unknown');
+    statusEl.style.color = 'var(--danger)';
+    showToast('Gagal menyimpan: ' + (e.message || 'Unknown'), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Simpan Jam Operasional';
+  }
+}
+
+async function resetJamOperasional() {
+  const confirm = await showConfirm({
+    icon: '↺',
+    title: 'Reset Jam Operasional?',
+    msg: 'Kembalikan ke default (07:00 - 09:00)?',
+    okLabel: 'Ya, Reset',
+    okColor: '#f59e0b'
+  });
+  
+  if (!confirm) return;
+  
+  document.getElementById('setting-jam-buka').value = '07:00';
+  document.getElementById('setting-jam-tutup').value = '09:00';
+  document.getElementById('status-jam').textContent = '↺ Direset ke default';
+  document.getElementById('status-jam').style.color = 'var(--text-muted)';
+  showToast('↺ Jam direset ke default (07:00 - 09:00)', 'warn');
+}
+
+// ============================================================
+// FUNGSI JAM OPERASIONAL PULANG (terpisah dari jam masuk)
+// ============================================================
+async function loadJamOperasionalPulang() {
+  if (!selectedCabangId) {
+    console.warn('⚠️ Cabang belum dipilih');
+    return;
+  }
+
+  try {
+    console.log('📥 Load jam operasional pulang untuk cabang:', selectedCabangId);
+
+    const { data, error } = await sb
+      .from('settings')
+      .select('value')
+      .eq('key', 'jam_operasional_pulang')
+      .eq('cabang_id', selectedCabangId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const statusEl = document.getElementById('status-jam-pulang');
+
+    if (data && data.value) {
+      let jam;
+      try {
+        jam = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      } catch(e) {
+        jam = { buka: '16:00', tutup: '18:00' };
+      }
+
+      document.getElementById('setting-jam-pulang-buka').value = jam.buka || '16:00';
+      document.getElementById('setting-jam-pulang-tutup').value = jam.tutup || '18:00';
+      statusEl.textContent = `✅ Dimuat (${jam.buka} - ${jam.tutup})`;
+      statusEl.style.color = 'var(--success)';
+      console.log('✅ Jam pulang loaded:', jam);
+    } else {
+      // Default
+      document.getElementById('setting-jam-pulang-buka').value = '16:00';
+      document.getElementById('setting-jam-pulang-tutup').value = '18:00';
+      statusEl.textContent = '✅ Default (16:00 - 18:00)';
+      statusEl.style.color = 'var(--text-muted)';
+    }
+  } catch (e) {
+    console.error('❌ Load jam pulang error:', e);
+    document.getElementById('status-jam-pulang').textContent = '⚠️ Gagal memuat: ' + (e.message || 'Unknown');
+    document.getElementById('status-jam-pulang').style.color = 'var(--danger)';
+  }
+}
+
+async function simpanJamOperasionalPulang() {
+  const btn = document.getElementById('btn-simpan-jam-pulang');
+  const statusEl = document.getElementById('status-jam-pulang');
+
+  const buka = document.getElementById('setting-jam-pulang-buka').value;
+  const tutup = document.getElementById('setting-jam-pulang-tutup').value;
+
+  if (!buka || !tutup) {
+    statusEl.textContent = '⚠️ Jam buka dan tutup wajib diisi!';
+    statusEl.style.color = 'var(--danger)';
+    showToast('Jam buka dan tutup wajib diisi', 'error');
+    return;
+  }
+
+  if (buka >= tutup) {
+    statusEl.textContent = '⚠️ Jam buka harus lebih awal dari jam tutup!';
+    statusEl.style.color = 'var(--danger)';
+    showToast('Jam buka harus lebih awal dari jam tutup!', 'error');
+    return;
+  }
+
+  if (!selectedCabangId) {
+    statusEl.textContent = '⚠️ Cabang belum dipilih!';
+    statusEl.style.color = 'var(--danger)';
+    showToast('Cabang belum dipilih', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyimpan...';
+  statusEl.textContent = '⏳ Menyimpan...';
+  statusEl.style.color = 'var(--text-muted)';
+
+  try {
+    const payload = {
+      cabang_id: selectedCabangId,
+      key: 'jam_operasional_pulang',
+      value: JSON.stringify({ buka, tutup }),
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: existing } = await sb
+      .from('settings')
+      .select('id')
+      .eq('key', 'jam_operasional_pulang')
+      .eq('cabang_id', selectedCabangId)
+      .maybeSingle();
+
+    let error;
+    if (existing) {
+      console.log('🔄 Update existing:', existing.id);
+      ({ error } = await sb
+        .from('settings')
+        .update(payload)
+        .eq('id', existing.id));
+    } else {
+      console.log('➕ Insert new');
+      ({ error } = await sb
+        .from('settings')
+        .insert(payload));
+    }
+
+    if (error) throw error;
+
+    statusEl.textContent = `✅ Disimpan! Buka: ${buka} - Tutup: ${tutup}`;
+    statusEl.style.color = 'var(--success)';
+    showToast(`✅ Jam pulang disimpan: ${buka} - ${tutup}`, 'success');
+
+    localStorage.removeItem('payroll_cache_jam_operasional_pulang_' + selectedCabangId);
+
+  } catch (e) {
+    console.error('❌ Simpan jam pulang error:', e);
+    statusEl.textContent = '❌ Gagal: ' + (e.message || 'Unknown');
+    statusEl.style.color = 'var(--danger)';
+    showToast('Gagal menyimpan: ' + (e.message || 'Unknown'), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Simpan Jam Pulang';
+  }
+}
+
+async function resetJamOperasionalPulang() {
+  const confirm = await showConfirm({
+    icon: '↺',
+    title: 'Reset Jam Pulang?',
+    msg: 'Kembalikan ke default (16:00 - 18:00)?',
+    okLabel: 'Ya, Reset',
+    okColor: '#f59e0b'
+  });
+
+  if (!confirm) return;
+
+  document.getElementById('setting-jam-pulang-buka').value = '16:00';
+  document.getElementById('setting-jam-pulang-tutup').value = '18:00';
+  document.getElementById('status-jam-pulang').textContent = '↺ Direset ke default';
+  document.getElementById('status-jam-pulang').style.color = 'var(--text-muted)';
+  showToast('↺ Jam pulang direset ke default (16:00 - 18:00)', 'warn');
+}
+
+// ============================================================
+// FUNGSI JAM KERJA (untuk deteksi lembur otomatis)
+// ============================================================
+let jamKerjaSettings = { mulai: '08:00', selesai: '17:00' };
+
+async function loadJamKerja() {
+  if (!selectedCabangId) return;
+  try {
+    const { data, error } = await sb
+      .from('settings')
+      .select('value')
+      .eq('key', 'jam_kerja')
+      .eq('cabang_id', selectedCabangId)
+      .maybeSingle();
+    if (error) throw error;
+    const statusEl = document.getElementById('status-jam-kerja');
+    if (data && data.value) {
+      let jam;
+      try { jam = typeof data.value === 'string' ? JSON.parse(data.value) : data.value; }
+      catch(e) { jam = { mulai: '08:00', selesai: '17:00' }; }
+      document.getElementById('setting-jam-kerja-mulai').value = jam.mulai || '08:00';
+      document.getElementById('setting-jam-kerja-selesai').value = jam.selesai || '17:00';
+      jamKerjaSettings = { mulai: jam.mulai || '08:00', selesai: jam.selesai || '17:00' };
+      if (statusEl) { statusEl.textContent = `✅ Dimuat (${jam.mulai} - ${jam.selesai})`; statusEl.style.color = 'var(--success)'; }
+    } else {
+      document.getElementById('setting-jam-kerja-mulai').value = '08:00';
+      document.getElementById('setting-jam-kerja-selesai').value = '17:00';
+      jamKerjaSettings = { mulai: '08:00', selesai: '17:00' };
+      if (statusEl) { statusEl.textContent = '✅ Default (08:00 - 17:00)'; statusEl.style.color = 'var(--text-muted)'; }
+    }
+  } catch (e) {
+    console.error('Load jam kerja error:', e);
+  }
+}
+
+async function simpanJamKerja() {
+  const btn = document.getElementById('btn-simpan-jam-kerja');
+  const statusEl = document.getElementById('status-jam-kerja');
+  const mulai = document.getElementById('setting-jam-kerja-mulai').value;
+  const selesai = document.getElementById('setting-jam-kerja-selesai').value;
+  if (!mulai || !selesai) { showToast('Jam mulai dan selesai wajib diisi', 'error'); return; }
+  if (mulai >= selesai) { showToast('Jam mulai harus lebih awal dari jam selesai', 'error'); return; }
+  if (!selectedCabangId) { showToast('Cabang belum dipilih', 'error'); return; }
+  btn.disabled = true; btn.textContent = '⏳ Menyimpan...';
+  if (statusEl) { statusEl.textContent = '⏳ Menyimpan...'; statusEl.style.color = 'var(--text-muted)'; }
+  try {
+    const payload = { cabang_id: selectedCabangId, key: 'jam_kerja', value: JSON.stringify({ mulai, selesai }), updated_at: new Date().toISOString() };
+    const { data: existing } = await sb.from('settings').select('id').eq('key', 'jam_kerja').eq('cabang_id', selectedCabangId).maybeSingle();
+    let error;
+    if (existing) { ({ error } = await sb.from('settings').update(payload).eq('id', existing.id)); }
+    else { ({ error } = await sb.from('settings').insert(payload)); }
+    if (error) throw error;
+    jamKerjaSettings = { mulai, selesai };
+    if (statusEl) { statusEl.textContent = `✅ Disimpan! ${mulai} - ${selesai}`; statusEl.style.color = 'var(--success)'; }
+    showToast(`✅ Jam kerja disimpan: ${mulai} - ${selesai}`);
+  } catch(e) {
+    showToast('Gagal menyimpan: ' + (e.message || e), 'error');
+    if (statusEl) { statusEl.textContent = '❌ Gagal'; statusEl.style.color = 'var(--danger)'; }
+  } finally { btn.disabled = false; btn.textContent = '💾 Simpan Jam Kerja'; }
+}
+
+async function resetJamKerja() {
+  const ok = await showConfirm({ icon: '↺', title: 'Reset Jam Kerja?', msg: 'Kembalikan ke default (08:00 - 17:00)?', okLabel: 'Ya, Reset', okColor: '#f59e0b' });
+  if (!ok) return;
+  document.getElementById('setting-jam-kerja-mulai').value = '08:00';
+  document.getElementById('setting-jam-kerja-selesai').value = '17:00';
+  const statusEl = document.getElementById('status-jam-kerja');
+  if (statusEl) { statusEl.textContent = '↺ Direset ke default'; statusEl.style.color = 'var(--text-muted)'; }
+  showToast('↺ Jam kerja direset ke default (08:00 - 17:00)', 'warn');
+}
+
+// ============================================================
+// DETEKSI LEMBUR OTOMATIS dari absensi (jam_keluar > jam selesai kerja)
+// ============================================================
+// Menyimpan item pending yang belum dikonfirmasi admin (hanya di memori, tidak ke DB)
+let lemburPendingList = [];
+
+/**
+ * Hitung jam lembur dari jam_keluar dan jam selesai kerja.
+ * Aturan: dibulatkan ke jam penuh, minimal 1 jam (< 1 jam tidak dihitung).
+ */
+function hitungJamLembur(jamKeluarStr, jamSelesaiKerja) {
+  // jamKeluarStr: ISO string datetime; jamSelesaiKerja: 'HH:MM'
+  const tgl = jamKeluarStr.slice(0, 10); // 'YYYY-MM-DD'
+  const selesaiDt = new Date(tgl + 'T' + jamSelesaiKerja + ':00');
+  const keluarDt = new Date(jamKeluarStr);
+  const selisihMs = keluarDt - selesaiDt;
+  if (selisihMs <= 0) return 0;
+  const selisihJam = selisihMs / (1000 * 60 * 60);
+  if (selisihJam < 1) return 0; // kurang dari 1 jam = tidak lembur
+  return Math.floor(selisihJam); // bulatkan ke bawah (jam penuh)
+}
+
+/**
+ * Scan absensi hari ini (atau tanggal dipilih) untuk mendeteksi lembur.
+ * Dijalankan saat switchTab ke 'kegiatan'.
+ */
+async function deteksiLemburOtomatis() {
+  if (!jamKerjaSettings || !jamKerjaSettings.selesai) return;
+  const date = document.getElementById('abs-date')?.value || todayStr();
+  const absList = absCache[date] || [];
+  const hadirList = absList.filter(a => a.status === 'hadir' && a.jam_keluar);
+
+  // Ambil tanggal-tanggal yang sudah ada di lembur (untuk skip duplikat)
+  let sudahLembur = new Set();
+  try {
+    const pegIds = allPegawai.map(p => p.id);
+    const { data } = await sb.from('lembur').select('pegawai_id,tanggal').eq('tanggal', date).in('pegawai_id', pegIds);
+    (data || []).forEach(l => sudahLembur.add(l.pegawai_id + '_' + l.tanggal));
+  } catch(e) { /* ignore */ }
+
+  const newPending = [];
+  for (const a of hadirList) {
+    const key = a.pegawai_id + '_' + date;
+    if (sudahLembur.has(key)) continue; // sudah ada di lembur, skip
+    const jamLembur = hitungJamLembur(a.jam_keluar, jamKerjaSettings.selesai);
+    if (jamLembur <= 0) continue;
+    const peg = allPegawai.find(p => p.id === a.pegawai_id);
+    if (!peg) continue;
+    // Cek apakah sudah ada di pending list (jangan duplikat)
+    const sudahPending = lemburPendingList.find(lp => lp.pegawai_id === a.pegawai_id && lp.tanggal === date);
+    if (sudahPending) { newPending.push(sudahPending); continue; }
+
+    const jamKeluarStr = new Date(a.jam_keluar).toLocaleTimeString('id', { hour: '2-digit', minute: '2-digit' });
+    newPending.push({
+      pegawai_id: a.pegawai_id,
+      nama: peg.nama,
+      jabatan: peg.jabatan || 'Pegawai',
+      tanggal: date,
+      jam_keluar: a.jam_keluar,
+      jam_keluar_str: jamKeluarStr,
+      jam_selesai_kerja: jamKerjaSettings.selesai,
+      jam_lembur_deteksi: jamLembur,
+      jam_lembur_edit: jamLembur // bisa diedit admin
+    });
+  }
+  lemburPendingList = newPending;
+  renderLemburPending();
+}
+
+function renderLemburPending() {
+  const panel = document.getElementById('panel-lembur-pending');
+  const list = document.getElementById('lembur-pending-list');
+  if (!panel || !list) return;
+  if (!lemburPendingList.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  list.innerHTML = lemburPendingList.map((lp, idx) => {
+    const tgl = new Date(lp.tanggal + 'T00:00:00');
+    const tglStr = `${String(tgl.getDate()).padStart(2,'0')}/${String(tgl.getMonth()+1).padStart(2,'0')}`;
+    return `<div class="lembur-pending-item" id="lp-item-${idx}">
+      <div class="lp-top">
+        <div>
+          <div class="lp-name">${lp.nama}</div>
+          <div class="lp-info">📅 ${tglStr} · Pulang: ${lp.jam_keluar_str} · Jam kerja s.d. ${lp.jam_selesai_kerja}</div>
+        </div>
+        <div class="lp-badge">+${lp.jam_lembur_deteksi}j terdeteksi</div>
+      </div>
+      <div class="lp-jam-edit">
+        <label>Jam lembur disetujui:</label>
+        <input type="number" class="lp-jam-input" id="lp-jam-${idx}" value="${lp.jam_lembur_edit}" min="1" step="1" oninput="updateLemburPendingJam(${idx}, this.value)">
+        <span style="font-size:11px;color:#92400e">jam</span>
+      </div>
+      <div class="lp-note">Admin dapat mengubah jam jika ada potongan istirahat, sholat, dll.</div>
+      <div class="lp-actions">
+        <button class="btn-lp-approve" onclick="approveLemburPending(${idx})">✅ Setujui & Simpan Lembur</button>
+        <button class="btn-lp-skip" onclick="skipLemburPending(${idx})">✕ Abaikan</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateLemburPendingJam(idx, val) {
+  const jam = parseInt(val) || 1;
+  if (lemburPendingList[idx]) lemburPendingList[idx].jam_lembur_edit = Math.max(1, jam);
+}
+
+async function approveLemburPending(idx) {
+  const lp = lemburPendingList[idx];
+  if (!lp) return;
+  // Baca jam dari input (bisa sudah diubah admin)
+  const inputEl = document.getElementById('lp-jam-' + idx);
+  const jamFinal = inputEl ? (parseInt(inputEl.value) || lp.jam_lembur_edit) : lp.jam_lembur_edit;
+  if (jamFinal < 1) { showToast('Jam lembur minimal 1 jam', 'warn'); return; }
+  const peg = allPegawai.find(p => p.id === lp.pegawai_id);
+  const upah_per_jam = peg?.upah_lembur || 0;
+  setLoading(true);
+  try {
+    const { error } = await sb.from('lembur').insert({
+      pegawai_id: lp.pegawai_id,
+      jam: jamFinal,
+      tanggal: lp.tanggal,
+      upah_per_jam: upah_per_jam
+    });
+    if (error) throw error;
+    lemburPendingList.splice(idx, 1);
+    renderLemburPending();
+    showToast(`✅ Lembur ${lp.nama} ${jamFinal}j disimpan`);
+    await loadLembur();
+  } catch(e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+async function skipLemburPending(idx) {
+  const lp = lemburPendingList[idx];
+  if (!lp) return;
+  const ok = await showConfirm({
+    icon: '✕',
+    title: 'Abaikan Lembur?',
+    msg: `Lembur ${lp.nama} tidak akan disimpan. Admin menganggap jam tambahan ini bukan lembur (misal: pengganti waktu kerja yang terlewat).`,
+    okLabel: 'Ya, Abaikan',
+    okColor: '#f59e0b'
+  });
+  if (!ok) return;
+  lemburPendingList.splice(idx, 1);
+  renderLemburPending();
+  showToast('Lembur diabaikan');
+}
+
+// ============================================================
+// BAGIAN (dengan konfirmasi hapus jika digunakan)
+// ============================================================
+async function loadBagian() {
+  if (!selectedCabangId) { bagianList = []; renderBagian(); return; }
+  const cached = getCache('bagian_' + selectedCabangId);
+  if (cached && !isOnline) { bagianList = upperNamaList(cached); renderBagian(); populateBagianSelect(); return; }
+  try {
+    const { data, error } = await sb.from('bagian').select('*').eq('cabang_id', selectedCabangId).order('nama');
+    if (error) throw error;
+    bagianList = upperNamaList(data || []);
+    saveCache('bagian_' + selectedCabangId, bagianList);
+    renderBagian();
+    populateBagianSelect();
+  } catch (e) {
+    console.error('Load bagian error:', e);
+    if (cached) { bagianList = upperNamaList(cached); renderBagian(); populateBagianSelect(); }
+  }
+}
+
+function renderBagian() {
+  const el = document.getElementById('bagian-list');
+  if (!bagianList.length) {
+    el.innerHTML = '<div style="text-align:center;padding:8px;color:var(--text-muted);font-size:12px">Belum ada bagian</div>';
+    return;
+  }
+  el.innerHTML = bagianList.map(b => {
+    // Cek apakah bagian digunakan oleh pegawai
+    const usedBy = allPegawai.filter(p => p.jabatan === b.nama);
+    const usedLabel = usedBy.length > 0 ? ` (${usedBy.length} pegawai)` : '';
+    return `<div class="bagian-item">
+      <span class="bi-name">${b.nama}</span>
+      <span class="bi-gaji">${rp(b.gaji_harian)}/hari</span>
+      <span class="bi-lembur">${rp(b.upah_lembur)}/jam</span>
+      <button class="bi-del" onclick="hapusBagian(${b.id})" title="Hapus bagian${usedLabel}">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function populateBagianSelect() {
+  const dd = document.getElementById('peg-bagian-select-dropdown');
+  const hidden = document.getElementById('peg-bagian-select');
+  dd.innerHTML = '';
+  bagianList.forEach(b => {
+    const opt = document.createElement('div');
+    opt.className = 'custom-option' + (String(hidden.value) === String(b.id) ? ' selected' : '');
+    opt.dataset.val = b.id;
+    opt.textContent = b.nama;
+    opt.addEventListener('click', () => selectCustomOption('peg-bagian-select', b.id, b.nama, { gaji: b.gaji_harian, lembur: b.upah_lembur }));
+    dd.appendChild(opt);
+  });
+}
+
+document.getElementById('peg-bagian-select').addEventListener('change', function() {
+  const gaji = parseFloat(this.dataset.gaji) || 0;
+  const lembur = parseFloat(this.dataset.lembur) || 0;
+  if (gaji) setRupiahInput('peg-gaji', gaji);
+  if (lembur) setRupiahInput('peg-lembur', lembur);
+});
+
+async function simpanBagian() {
+  const nama = document.getElementById('bagian-nama').value.trim().toUpperCase();
+  const gaji_harian = parseFloat(document.getElementById('bagian-gaji').dataset.raw) || 0;
+  const upah_lembur = parseFloat(document.getElementById('bagian-lembur').dataset.raw) || 0;
+
+  if (!nama) { showToast('Nama bagian wajib diisi', 'warn'); return; }
+  if (!selectedCabangId) { showToast('Pilih cabang dulu', 'warn'); return; }
+
+  setLoading(true);
+  try {
+    const { error } = await sb.from('bagian').insert({
+      cabang_id: selectedCabangId,
+      nama: nama,
+      gaji_harian: gaji_harian,
+      upah_lembur: upah_lembur
+    });
+    if (error) throw error;
+    document.getElementById('bagian-nama').value = '';
+    setRupiahInput('bagian-gaji', '');
+    setRupiahInput('bagian-lembur', '');
+    showToast('Bagian ditambahkan ✓');
+    await loadBagian();
+  } catch (e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+async function hapusBagian(id) {
+  const b = bagianList.find(x => x.id === id);
+  if (!b) return;
+  const usedBy = allPegawai.filter(p => p.jabatan === b.nama);
+  let msg = 'Bagian akan dihapus permanen.';
+  if (usedBy.length > 0) {
+    msg = `⚠️ Bagian ini digunakan oleh ${usedBy.length} pegawai (${usedBy.map(p => p.nama).join(', ')}).\n\n${msg}`;
+  }
+  const confirm = await showConfirm({
+    icon: usedBy.length > 0 ? '⚠️' : '🗑️',
+    title: usedBy.length > 0 ? `Bagian digunakan oleh ${usedBy.length} pegawai` : 'Hapus Bagian?',
+    msg: msg,
+    okLabel: usedBy.length > 0 ? 'Ya, Hapus Paksa' : 'Ya, Hapus',
+    okColor: usedBy.length > 0 ? '#f59e0b' : 'var(--danger)'
+  });
+  if (!confirm) return;
+  setLoading(true);
+  try {
+    // Jika ada pegawai yang menggunakan bagian ini, update jabatan mereka
+    if (usedBy.length > 0) {
+      for (const p of usedBy) {
+        await sb.from('pegawai').update({ jabatan: null }).eq('id', p.id);
+      }
+    }
+    const { error } = await sb.from('bagian').delete().eq('id', id);
+    if (error) throw error;
+    showToast('Bagian dihapus');
+    await loadBagian();
+    await loadPegawai();
+  } catch (e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+async function loadPegawai() {
+  const cached = getCache('pegawai_' + selectedCabangId);
+  if (cached && !isOnline) { allPegawai = upperJabatanList(upperNamaList(cached)); renderPegawai(); populateLemburSelect(); return allPegawai; }
+  try {
+    // AMBIL SEMUA PEGAWAI, TANPA FILTER CABANG
+    const { data, error } = await sb.from('pegawai').select('*').order('nama');
+    if (error) throw error;
+    allPegawai = upperJabatanList(upperNamaList(data || []));
+    saveCache('pegawai_' + selectedCabangId, allPegawai);
+    renderPegawai();
+    populateLemburSelect();
+    return allPegawai;
+  } catch (e) {
+    console.error('Load pegawai error:', e);
+    if (cached) { allPegawai = upperJabatanList(upperNamaList(cached)); renderPegawai(); populateLemburSelect(); }
+    return allPegawai || [];
+  }
+}
+
+function renderPegawai() {
+  const aktif = allPegawai.filter(p => p.aktif !== false);
+  document.getElementById('peg-total').textContent = allPegawai.length;
+  document.getElementById('peg-aktif').textContent = aktif.length;
+
+  const el = document.getElementById('peg-list');
+  if (!allPegawai.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">👤 Belum ada pegawai</div><div class="empty-sub">Tambahkan pegawai di atas</div></div>';
+    return;
+  }
+  el.innerHTML = allPegawai.map((p, i) => {
+    const clr = avatarColors(i);
+    const isAktif = p.aktif !== false;
+    return `<div class="peg-item" onclick="editPegawai(${p.id})">
+      <div class="pi-avatar" style="background:${clr.bg};color:${clr.fg}">${p.nama.charAt(0).toUpperCase()}</div>
+      <div class="pi-info"><div class="pi-name">${p.nama}</div><div class="pi-jabatan">${p.jabatan || 'Pegawai'}</div></div>
+      <div class="pi-status ${isAktif?'aktif':'nonaktif'}">${isAktif?'✅ Aktif':'❌ Nonaktif'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// PEGAWAI CRUD
+// ============================================================
+function editPegawai(id) {
+  const p = allPegawai.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('peg-edit-id').value = p.id;
+  document.getElementById('peg-nama').value = p.nama || '';
+  const b = p.jabatan ? bagianList.find(x => x.nama === p.jabatan) : null;
+  if (b) selectCustomOption('peg-bagian-select', b.id, b.nama, { gaji: b.gaji_harian, lembur: b.upah_lembur });
+  else selectCustomOption('peg-bagian-select', '', '— Pilih Bagian —');
+  setRupiahInput('peg-gaji', p.gaji_harian || p.gaji_pokok || 0);
+  setRupiahInput('peg-lembur', p.upah_lembur || 0);
+  selectCustomOption('peg-status', p.aktif !== false ? 'true' : 'false', p.aktif !== false ? 'Aktif' : 'Nonaktif');
+  document.getElementById('peg-form-title').textContent = '✏️ Edit Pegawai';
+  document.getElementById('btn-hapus-peg').style.display = 'block';
+  document.getElementById('peg-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetPegawaiForm() {
+  document.getElementById('peg-edit-id').value = '';
+  document.getElementById('peg-nama').value = '';
+  selectCustomOption('peg-bagian-select', '', '— Pilih Bagian —');
+  setRupiahInput('peg-gaji', '');
+  setRupiahInput('peg-lembur', '');
+  selectCustomOption('peg-status', 'true', 'Aktif');
+  document.getElementById('peg-form-title').textContent = '➕ Tambah Pegawai';
+  document.getElementById('btn-hapus-peg').style.display = 'none';
+}
+
+async function simpanPegawai() {
+  const id = document.getElementById('peg-edit-id').value;
+  const nama = document.getElementById('peg-nama').value.trim().toUpperCase();
+  if (!nama) { showToast('Nama pegawai wajib diisi', 'warn'); return; }
+
+  const bagianId = document.getElementById('peg-bagian-select').value;
+  let jabatan = '';
+  let gaji_harian = parseFloat(document.getElementById('peg-gaji').dataset.raw) || 0;
+  let upah_lembur = parseFloat(document.getElementById('peg-lembur').dataset.raw) || 0;
+
+  if (bagianId) {
+    const b = bagianList.find(x => x.id == bagianId);
+    if (b) {
+      jabatan = b.nama;
+      if (!gaji_harian) gaji_harian = b.gaji_harian;
+      if (!upah_lembur) upah_lembur = b.upah_lembur;
+    }
+  } else {
+    jabatan = document.getElementById('peg-bagian-select-label')?.textContent || '';
+  }
+
+  const payload = {
+    nama: nama,
+    jabatan: jabatan,
+    gaji_harian: gaji_harian,
+    upah_lembur: upah_lembur,
+    aktif: document.getElementById('peg-status').value === 'true'
+  };
+
+  setLoading(true);
+  try {
+    let error;
+    if (id) {
+      ({ error } = await sb.from('pegawai').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('pegawai').insert(payload));
+    }
+    if (error) throw error;
+    resetPegawaiForm();
+    await loadPegawai();
+    showToast(id ? 'Pegawai diperbarui' : 'Pegawai ditambahkan');
+    populateLemburSelect();
+    saveCache('pegawai_' + selectedCabangId, allPegawai);
+    // Langsung sinkronkan tampilan TAB ABSENSI (kalau sudah ada tanggal yang dimuat)
+    // supaya pegawai baru/ubahan langsung muncul tanpa perlu refresh manual.
+    if (editAbsDate) { renderAbsensi(editAbsDate); }
+  } catch (e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+async function hapusPegawai() {
+  const id = document.getElementById('peg-edit-id').value;
+  if (!id) return;
+  const confirm = await showConfirm({
+    icon: '🗑️',
+    title: 'Hapus Pegawai?',
+    msg: 'Data pegawai beserta seluruh data absensi dan lemburnya akan dihapus permanen.',
+    okLabel: 'Ya, Hapus'
+  });
+  if (!confirm) return;
+  setLoading(true);
+  try {
+    await sb.from('lembur').delete().eq('pegawai_id', id);
+    await sb.from('absensi').delete().eq('pegawai_id', id);
+    const { error } = await sb.from('pegawai').delete().eq('id', id);
+    if (error) throw error;
+    resetPegawaiForm();
+    allPegawai = allPegawai.filter(p => p.id !== parseInt(id));
+    saveCache('pegawai_' + selectedCabangId, allPegawai);
+    renderPegawai();
+    populateLemburSelect();
+    if (document.getElementById('panel-absensi').style.display !== 'none') {
+      const today = document.getElementById('abs-date').value || todayStr();
+      const cacheKey = 'absensi_' + selectedCabangId + '_' + today;
+      localStorage.removeItem('payroll_cache_' + cacheKey);
+      await loadAbsensi();
+    }
+    showToast('Pegawai dan semua datanya dihapus');
+  } catch (e) {
+    console.error('Hapus error:', e);
+    showToast('Gagal menghapus: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+// ============================================================
+// ABSENSI
+// ============================================================
+async function loadAbsensi() {
+  const date = document.getElementById('abs-date').value;
+  if (!date) {
+    document.getElementById('abs-list').innerHTML = '<div class="empty-state"><div class="empty-sub">Pilih tanggal untuk memuat absensi</div></div>';
+    return;
+  }
+  editAbsDate = date;
+  absLockOverride.clear();
+  setLoading(true, 'btn-load-absensi');
+  const cacheKey = 'absensi_' + selectedCabangId + '_' + date;
+  const cached = getCache(cacheKey);
+  if (cached && !isOnline) {
+    absCache[date] = cached;
+    absDirty = false;
+    renderAbsensi(date);
+    setLoading(false, 'btn-load-absensi');
+    return;
+  }
+  try {
+    const pegawaiIds = (allPegawai || []).map(p => p.id);
+    let absQ = sb.from('absensi').select('*').eq('tanggal', date);
+    if (pegawaiIds.length > 0) absQ = absQ.in('pegawai_id', pegawaiIds);
+    const { data, error } = await absQ;
+    if (error) throw error;
+    absCache[date] = data || [];
+    absDirty = false;
+    saveCache(cacheKey, data || []);
+    const aktif = allPegawai.filter(p => p.aktif !== false);
+    if (!aktif.length) {
+      document.getElementById('abs-list').innerHTML = '<div class="empty-state"><div class="empty-title">Belum ada pegawai aktif</div><div class="empty-sub">Tambahkan pegawai di tab Pegawai</div></div>';
+      updateAbsSummary([]);
+      setLoading(false, 'btn-load-absensi');
+      return;
+    }
+    const jmlHadir = (absCache[date] || []).filter(a => a.status === 'hadir').length;
+    updateAbsStatusBadge(jmlHadir);
+    renderAbsensi(date);
+    // Jika panel kegiatan sedang aktif, refresh deteksi lembur
+    if (document.getElementById('panel-kegiatan').style.display !== 'none') deteksiLemburOtomatis();
+  } catch (e) {
+    console.error('Load absensi error:', e);
+    if (cached) { absCache[date] = cached; renderAbsensi(date); }
+    else { document.getElementById('abs-list').innerHTML = `<div class="empty-state"><div class="empty-title">❌ Gagal memuat absensi</div><div class="empty-sub">${e.message || 'Cek koneksi'}</div></div>`; }
+    showToast('Gagal memuat absensi', 'error');
+  } finally { setLoading(false, 'btn-load-absensi'); }
+}
+
+function renderAbsensi(date) {
+  const existing = absCache[date] || [];
+  const aktif = allPegawai.filter(p => p.aktif !== false);
+  const hadirMap = {};
+  existing.forEach(a => { if (a.status === 'hadir') { hadirMap[a.pegawai_id] = a; } });
+
+  if (!aktif.length) {
+    document.getElementById('abs-list').innerHTML = '<div class="empty-state"><div class="empty-title">Belum ada pegawai aktif</div><div class="empty-sub">Tambahkan pegawai di tab Pegawai</div></div>';
+    updateAbsSummary([]);
+    return;
+  }
+
+  document.getElementById('abs-list').innerHTML = aktif.map((p, i) => {
+    const clr = avatarColors(i);
+    const isHadir = !!hadirMap[p.id];
+    const overridden = absLockOverride.has(p.id);
+    const locked = isHadir && !overridden;
+    const statusText = isHadir ? 'Hadir' : '';
+    const jamMasuk = isHadir && hadirMap[p.id].jam_masuk
+      ? new Date(hadirMap[p.id].jam_masuk).toLocaleTimeString('id', { hour: '2-digit', minute: '2-digit' })
+      : null;
+    const jamKeluar = isHadir && hadirMap[p.id].jam_keluar
+      ? new Date(hadirMap[p.id].jam_keluar).toLocaleTimeString('id', { hour: '2-digit', minute: '2-digit' })
+      : null;
+    let lockIconHtml = '';
+    if (locked) {
+      lockIconHtml = `<button class="abs-lock-btn" onclick="event.stopPropagation(); unlockAbsenRow(${p.id})" title="Ketuk untuk ubah status">🔒</button>`;
+    } else if (isHadir && overridden) {
+      lockIconHtml = `<button class="abs-lock-btn unlocked" onclick="event.stopPropagation(); lockAbsenRow(${p.id})" title="Ketuk untuk kunci lagi">🔓</button>`;
+    }
+    const jamHtml = [
+      jamMasuk ? `⏰ ${jamMasuk}` : '',
+      jamKeluar ? `🚪 ${jamKeluar}` : ''
+    ].filter(Boolean).join(' · ');
+    return `<div class="abs-item" id="abs-row-${p.id}">
+      <div class="abs-avatar" style="background:${clr.bg};color:${clr.fg}">${p.nama.charAt(0).toUpperCase()}</div>
+      <div class="abs-info"><div class="abs-name">${p.nama}</div><div class="abs-jabatan">${p.jabatan || 'Pegawai'}${jamHtml ? ` · ${jamHtml}` : ''}</div></div>
+      <div class="toggle-wrapper">
+        ${lockIconHtml}
+        <button class="toggle-hadir ${isHadir ? 'active' : ''} ${locked ? 'locked' : ''}" onclick="toggleAbsen(${p.id})" id="toggle-${p.id}">
+          <div class="toggle-hadir-track"><div class="toggle-hadir-thumb"></div></div>
+        </button>
+        <span class="toggle-status ${isHadir ? 'on' : 'off'}" id="label-${p.id}">${statusText}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateAbsSummary(existing);
+}
+
+async function toggleAbsen(pegawaiId) {
+  const date = editAbsDate;
+  if (!absCache[date]) absCache[date] = [];
+  const idx = absCache[date].findIndex(a => a.pegawai_id === pegawaiId);
+  const isHadir = idx >= 0 && absCache[date][idx].status === 'hadir';
+
+  // Status Hadir terkunci secara default supaya admin tidak salah klik (misal kelewat tap saat scroll).
+  // Harus ketuk ikon 🔒 dulu untuk bisa membatalkan status Hadir.
+  if (isHadir && !absLockOverride.has(pegawaiId)) {
+    showToast('Status Hadir terkunci. Ketuk ikon 🔒 untuk mengubah', 'warn');
+    return;
+  }
+  absLockOverride.delete(pegawaiId);
+
+  // Kunci toggle sementara selagi proses simpan ke server berjalan,
+  // supaya tidak ke-tap dobel.
+  const toggleBtn = document.getElementById('toggle-' + pegawaiId);
+  if (toggleBtn) toggleBtn.disabled = true;
+
+  const pegawai = allPegawai.find(p => p.id === pegawaiId);
+  const namaPegawai = pegawai ? pegawai.nama : 'Pegawai';
+
+  try {
+    if (isHadir) {
+      // Batalkan kehadiran -> langsung hapus dari Supabase, otomatis hilang dari hitungan rekap
+      const { error } = await sb.from('absensi').delete()
+        .eq('pegawai_id', pegawaiId).eq('tanggal', date).eq('status', 'hadir');
+      if (error) throw error;
+      absCache[date].splice(idx, 1);
+      showToast(`↩️ ${namaPegawai} — kehadiran dibatalkan`, 'warn');
+    } else {
+      // Tandai Hadir -> langsung simpan ke Supabase (sama seperti absen via barcode/QR),
+      // otomatis masuk hitungan rekap tanpa perlu tombol Simpan.
+      // BUG FIX: cek dulu ke DB (bukan cuma cache lokal) supaya kalau ada device/tab
+      // lain yang baru saja menandai Hadir untuk pegawai+tanggal yang sama, tidak
+      // sampai ke-insert dobel jadi 2 baris absensi.
+      const { data: cekExisting } = await sb.from('absensi')
+        .select('id, jam_masuk').eq('pegawai_id', pegawaiId).eq('tanggal', date).eq('status', 'hadir').maybeSingle();
+      if (cekExisting) {
+        const row = { pegawai_id: pegawaiId, status: 'hadir', lembur_jam: 0, tanggal: date, jam_masuk: cekExisting.jam_masuk };
+        if (idx >= 0) absCache[date][idx] = row; else absCache[date].push(row);
+        showToast(`✅ ${namaPegawai} — sudah tercatat Hadir sebelumnya`, 'warn');
+      } else {
+        const jamMasuk = new Date().toISOString();
+        const { error } = await sb.from('absensi').insert({
+          pegawai_id: pegawaiId, tanggal: date, status: 'hadir', lembur_jam: 0, jam_masuk: jamMasuk
+        });
+        if (error) throw error;
+        const row = { pegawai_id: pegawaiId, status: 'hadir', lembur_jam: 0, tanggal: date, jam_masuk: jamMasuk };
+        if (idx >= 0) absCache[date][idx] = row; else absCache[date].push(row);
+        showToast(`✅ ${namaPegawai} — Hadir (tersimpan otomatis)`);
+      }
+    }
+    const cacheKey = 'absensi_' + selectedCabangId + '_' + date;
+    saveCache(cacheKey, absCache[date]);
+  } catch (e) {
+    showToast('Gagal simpan absensi: ' + (e.message || e), 'error');
+  } finally {
+    renderAbsensi(date);
+  }
+}
+
+function unlockAbsenRow(pegawaiId) {
+  absLockOverride.add(pegawaiId);
+  showToast('Status bisa diubah, ketuk toggle untuk membatalkan kehadiran', 'warn');
+  renderAbsensi(editAbsDate);
+}
+
+function lockAbsenRow(pegawaiId) {
+  absLockOverride.delete(pegawaiId);
+  showToast('Status Hadir dikunci kembali 🔒');
+  renderAbsensi(editAbsDate);
+}
+
+function updateAbsSummary(rows) {
+  const hadir = rows.filter(r => r.status === 'hadir').length;
+  const total = allPegawai.filter(p => p.aktif !== false).length;
+  document.getElementById('abs-total').textContent = total;
+  document.getElementById('abs-hadir').textContent = hadir;
+  document.getElementById('abs-tidak').textContent = Math.max(0, total - hadir);
+  updateAbsStatusBadge(hadir);
+}
+
+function populateLemburSelect() {
+  const dd = document.getElementById('lembur-pegawai-select-dropdown');
+  const hidden = document.getElementById('lembur-pegawai-select');
+  // Tampilkan SEMUA pegawai aktif (tanpa filter cabang)
+  const aktif = allPegawai.filter(p => p.aktif !== false);
+  dd.innerHTML = '';
+  if (!aktif.length) {
+    const opt = document.createElement('div');
+    opt.className = 'custom-option';
+    opt.textContent = '— Tidak ada pegawai aktif —';
+    opt.style.color = 'var(--text-muted)';
+    dd.appendChild(opt);
+    return;
+  }
+  aktif.forEach(p => {
+    const opt = document.createElement('div');
+    opt.className = 'custom-option' + (String(hidden.value) === String(p.id) ? ' selected' : '');
+    opt.dataset.val = p.id;
+    opt.textContent = p.nama;
+    opt.addEventListener('click', () => selectCustomOption('lembur-pegawai-select', p.id, p.nama));
+    dd.appendChild(opt);
+  });
+  if (hidden.value && !aktif.find(p => String(p.id) === String(hidden.value))) {
+    selectCustomOption('lembur-pegawai-select', '', '— Pilih Pegawai —');
+  }
+}
+
+async function loadLembur() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  // Gunakan periode payroll (sama dengan rekap periode-ini)
+  const { startDate: start, endDate: end } = getPeriode(today, payrollSettings);
+  
+  let query = sb.from('lembur')
+    .select('*, pegawai(nama, jabatan, gaji_harian, upah_lembur)')
+    .gte('tanggal', toStr(start))
+    .lte('tanggal', toStr(end))
+    .order('tanggal', { ascending: true });
+  
+  const cacheKey = 'lembur_' + selectedCabangId + '_' + toStr(start) + '_' + toStr(end);
+  const cached = getCache(cacheKey);
+  if (cached && !isOnline) { lemburCache = upperLemburPegawaiCase(cached); renderLembur(); return; }
+  
+  try {
+    const { data, error } = await query;
+    if (error) throw error;
+    lemburCache = upperLemburPegawaiCase(data || []);
+    saveCache(cacheKey, lemburCache);
+    renderLembur();
+  } catch (e) {
+    console.error('Load lembur error:', e);
+    if (cached) { lemburCache = upperLemburPegawaiCase(cached); renderLembur(); }
+    showToast('Gagal memuat lembur', 'error');
+  }
+}
+function upperLemburPegawaiCase(list) {
+  (list || []).forEach(l => {
+    if (l && l.pegawai) {
+      if (typeof l.pegawai.nama === 'string') l.pegawai.nama = l.pegawai.nama.toUpperCase();
+      if (typeof l.pegawai.jabatan === 'string') l.pegawai.jabatan = l.pegawai.jabatan.toUpperCase();
+    }
+  });
+  return list || [];
+}
+
+function renderLembur() {
+  const el = document.getElementById('lembur-list');
+  if (!lemburCache.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">📋 Belum ada data lembur</div><div class="empty-sub">Input lembur di atas</div></div>';
+    document.getElementById('keg-total-jam').textContent = '0j';
+    document.getElementById('keg-total-peg').textContent = '0 pegawai';
+    return;
+  }
+
+  const groups = {};
+  let totalJam = 0;
+  const pegSet = new Set();
+  lemburCache.forEach(l => {
+    const pid = l.pegawai_id;
+    if (!groups[pid]) {
+      groups[pid] = { pegawai_id: pid, name: l.pegawai?.nama || 'Unknown', jabatan: l.pegawai?.jabatan || '', details: [], total: 0 };
+    }
+    const upah = l.upah_per_jam || l.pegawai?.upah_lembur || 0;
+    groups[pid].details.push({
+      tanggal: l.tanggal,
+      jam: l.jam,
+      upah_per_jam: upah,
+      total: l.jam * upah,
+      id: l.id
+    });
+    groups[pid].total += l.jam * upah;
+    totalJam += l.jam;
+    pegSet.add(pid);
+  });
+
+  document.getElementById('keg-total-jam').textContent = totalJam + 'j';
+  document.getElementById('keg-total-peg').textContent = pegSet.size + ' pegawai';
+
+  const sorted = Object.values(groups).sort((a, b) => b.total - a.total);
+  el.innerHTML = sorted.map(g => {
+    const detailHtml = g.details.map(d => {
+      const tgl = new Date(d.tanggal + 'T00:00:00');
+      const tglStr = `${String(tgl.getDate()).padStart(2,'0')}/${String(tgl.getMonth()+1).padStart(2,'0')}`;
+      return `<div class="li-detail-row">
+        <div class="li-detail-info">
+          <span>📅 ${tglStr}</span>
+          <span>⏱ ${d.jam}j</span>
+          <span>💰 ${rp(d.upah_per_jam)}/jam</span>
+          <span style="font-weight:700;color:var(--primary-dark)">${rp(d.total)}</span>
+        </div>
+        <div class="li-detail-actions">
+          <button class="btn-lembur-edit" onclick="editLembur(${d.id},'${d.tanggal}',${d.jam},${d.upah_per_jam},${g.pegawai_id},'${g.name}')">✏️</button>
+          <button class="btn-lembur-del" onclick="hapusLembur(${d.id},'${g.name}','${tglStr}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="lembur-item">
+      <div class="li-top">
+        <div><span class="li-name">${g.name}</span><span style="font-size:10px;color:var(--text-muted);margin-left:6px">${g.jabatan}</span></div>
+        <span class="li-total">${rp(g.total)}</span>
+      </div>
+      ${detailHtml}
+    </div>`;
+  }).join('');
+}
+
+async function simpanLembur() {
+  const pegawaiId = document.getElementById('lembur-pegawai-select').value;
+  const jam = parseFloat(document.getElementById('lembur-jam').value);
+  const tanggal = document.getElementById('lembur-tanggal').value;
+  const editId = document.getElementById('lembur-edit-id').value;
+
+  if (!pegawaiId) { showToast('Pilih pegawai', 'warn'); return; }
+  if (!jam || jam <= 0) { showToast('Masukkan jam lembur', 'warn'); return; }
+  if (!tanggal) { showToast('Pilih tanggal', 'warn'); return; }
+
+  const pegawai = allPegawai.find(p => p.id == pegawaiId);
+  const upah_per_jam = pegawai?.upah_lembur || 0;
+
+  setLoading(true);
+  try {
+    if (editId) {
+      // Mode edit — UPDATE
+      const { error } = await sb.from('lembur').update({
+        pegawai_id: parseInt(pegawaiId),
+        jam: jam,
+        tanggal: tanggal,
+        upah_per_jam: upah_per_jam
+      }).eq('id', editId);
+      if (error) throw error;
+      showToast('Lembur diperbarui ✓');
+      batalEditLembur();
+    } else {
+      // Mode tambah — INSERT
+      const { error } = await sb.from('lembur').insert({
+        pegawai_id: parseInt(pegawaiId),
+        jam: jam,
+        tanggal: tanggal,
+        upah_per_jam: upah_per_jam
+      });
+      if (error) throw error;
+      document.getElementById('lembur-jam').value = '';
+      showToast('Lembur ditambahkan ✓');
+    }
+    await loadLembur();
+  } catch (e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+async function hapusLembur(id, nama, tglStr) {
+  const ok = await showConfirm({
+    icon: '🗑️',
+    title: 'Hapus Lembur?',
+    msg: `Hapus data lembur ${nama} tanggal ${tglStr}?`,
+    okLabel: 'Hapus',
+    okColor: 'var(--danger)'
+  });
+  if (!ok) return;
+  setLoading(true);
+  try {
+    const { error } = await sb.from('lembur').delete().eq('id', id);
+    if (error) throw error;
+    showToast('Lembur dihapus ✓');
+    await loadLembur();
+  } catch (e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+  } finally { setLoading(false); }
+}
+
+function editLembur(id, tanggal, jam, upah_per_jam, pegawai_id, nama) {
+  // Isi form dengan data yang akan diedit
+  selectCustomOption('lembur-pegawai-select', pegawai_id, nama);
+  document.getElementById('lembur-jam').value = jam;
+  document.getElementById('lembur-tanggal').value = tanggal;
+  // Tandai mode edit
+  document.getElementById('lembur-edit-id').value = id;
+  document.getElementById('btn-simpan-lembur').textContent = '💾 Simpan Perubahan';
+  document.getElementById('btn-batal-lembur').style.display = 'block';
+  // Scroll ke form
+  document.querySelector('.lembur-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function batalEditLembur() {
+  document.getElementById('lembur-edit-id').value = '';
+  document.getElementById('lembur-jam').value = '';
+  document.getElementById('lembur-tanggal').value = todayStr();
+  selectCustomOption('lembur-pegawai-select', '', '— Pilih Pegawai —');
+  document.getElementById('btn-simpan-lembur').textContent = '💾 Tambah Lembur';
+  document.getElementById('btn-batal-lembur').style.display = 'none';
+}
+
+// ============================================================
+// REKAP PEGAWAI — Auto-load, Accordion, Clear Detail
+// ============================================================
+function toggleRekap(pegawaiId) {
+  const body = document.getElementById('rekap-body-' + pegawaiId);
+  const toggle = document.getElementById('rekap-toggle-' + pegawaiId);
+  if (!body || !toggle) return;
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+function printRekap(pegawaiId) {
+  const accordion = document.getElementById('rekap-acc-' + pegawaiId);
+  if (!accordion) return;
+  const nameEl = accordion.querySelector('.rh-name');
+  const totalEl = accordion.querySelector('.rh-total');
+  const bodyEl = document.getElementById('rekap-body-' + pegawaiId);
+  if (!nameEl || !bodyEl) return;
+  const nama = nameEl.textContent || 'Pegawai';
+  const total = totalEl ? totalEl.textContent : 'Rp 0';
+  const rows = bodyEl.querySelectorAll('.rekap-perhitungan .row');
+  let detailHtml = '';
+  rows.forEach(row => {
+    const spans = row.querySelectorAll('span');
+    if (spans.length === 2) {
+      detailHtml += `<div style="display:flex;justify-content:space-between">${spans[0].textContent}<span>${spans[1].textContent}</span></div>`;
+    }
+  });
+  const printWindow = window.open('', '_blank', 'width=400,height=500');
+  if (!printWindow) { showToast('Izinkan popup untuk mencetak', 'warn'); return; }
+  printWindow.document.write(`
+    <html><head><title>Rekap ${nama}</title>
+    <style>body{font-family:'Courier New',monospace;font-size:14px;padding:20px;line-height:1.8}
+    .header{text-align:center;border-bottom:1px dashed #ccc;padding-bottom:10px;margin-bottom:10px}
+    .total{font-weight:bold;font-size:16px;border-top:2px solid #000;padding-top:8px;margin-top:8px}
+    .detail{padding:4px 0}
+    </style></head><body>
+    <div class="header"><h2>SRI REJEKI</h2><p>Rekap Gaji Pegawai</p></div>
+    <div style="display:flex;justify-content:space-between"><span>Nama</span><span>${nama}</span></div>
+    <div style="display:flex;justify-content:space-between"><span>Total Gaji</span><span>${total}</span></div>
+    <div class="detail">${detailHtml}</div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#666">Dicetak dari Sri Rejeki Payroll</div>
+    <script>window.print();<\/script>
+    </body></html>
+  `);
+  printWindow.document.close();
+}
+
+function hitungHariKerja(startDate, endDate, hariLibur) {
+  let count = 0;
+  const d = new Date(startDate);
+  while (d <= endDate) {
+    if (d.getDay() !== hariLibur) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function getPeriode(tanggal, settings) {
+  const d = new Date(tanggal);
+  if (settings.periode_gaji === 'mingguan') {
+    const day = d.getDay();
+    const hariGajian = settings.hari_gajian ?? 4;
+    // Cari hari gajian terdekat ke depan (atau hari ini jika pas)
+    let diffToEnd = (hariGajian - day + 7) % 7;
+    const endDate = new Date(d);
+    endDate.setDate(d.getDate() + diffToEnd);
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 5);
+    return { startDate, endDate, hariKerja: hitungHariKerja(startDate, endDate, settings.hari_libur) };
+  } else {
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0);
+    return { startDate, endDate, hariKerja: hitungHariKerja(startDate, endDate, settings.hari_libur) };
+  }
+}
+
+let currentRekapPill = 'periode-ini';
+
+function updateRekapPillLabels() {
+  const isMingguan = (payrollSettings.periode_gaji || 'mingguan') === 'mingguan';
+  document.getElementById('pill-periode-ini').textContent = isMingguan ? 'Periode Ini' : 'Bulan Ini';
+  document.getElementById('pill-periode-lalu').textContent = isMingguan ? 'Periode Lalu' : 'Bulan Lalu';
+}
+
+function getRekapRange(pill) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const s = payrollSettings;
+  const isMingguan = (s.periode_gaji || 'mingguan') === 'mingguan';
+  let from, to, label;
+
+  if (pill === 'periode-ini') {
+    if (isMingguan) {
+      const p = getPeriode(today, s);
+      from = p.startDate; to = p.endDate;
+      label = 'Periode ini (' + fmtDate(from) + ' – ' + fmtDate(to) + ')';
+    } else {
+      from = new Date(today.getFullYear(), today.getMonth(), 1);
+      to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      label = 'Bulan ini (' + fmtDate(from) + ' – ' + fmtDate(to) + ')';
+    }
+  } else if (pill === 'periode-lalu') {
+    if (isMingguan) {
+      const p = getPeriode(today, s);
+      from = new Date(p.startDate);
+      from.setDate(from.getDate() - 7);
+      to = new Date(p.endDate);
+      to.setDate(to.getDate() - 7);
+      label = 'Periode lalu (' + fmtDate(from) + ' – ' + fmtDate(to) + ')';
+    } else {
+      from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      to = new Date(today.getFullYear(), today.getMonth(), 0);
+      label = 'Bulan lalu (' + fmtDate(from) + ' – ' + fmtDate(to) + ')';
+    }
+  }
+  return { from: toISO(from), to: toISO(to), label };
+}
+
+function fmtDate(d) {
+  return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'][d.getMonth()];
+}
+
+function toISO(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function setRekapPill(el) {
+  document.querySelectorAll('.rekap-pill').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  currentRekapPill = el.dataset.pill;
+  loadRekap();
+}
+
+async function loadRekap() {
+  const { from, to, label } = getRekapRange(currentRekapPill);
+  document.getElementById('rek-periode-label').textContent = label;
+  setLoading(true, 'btn-load-rekap');
+  const cacheKey = 'rekap_' + selectedCabangId + '_' + from + '_' + to;
+  const cached = getCache(cacheKey);
+  if (cached && !isOnline) {
+    renderRekap(cached.absData || [], cached.lemburData || [], from, to);
+    setLoading(false, 'btn-load-rekap');
+    return;
+  }
+  try {
+    // Filter berdasarkan pegawai_id yang ada di cabang terpilih
+    // (tabel absensi tidak punya cabang_id langsung, relasinya via pegawai)
+    const pegawaiIds = (allPegawai || []).map(p => p.id);
+    let absQuery = sb.from('absensi').select('*').gte('tanggal', from).lte('tanggal', to);
+    let lemburQuery = sb.from('lembur').select('*, pegawai(nama, jabatan, gaji_harian, upah_lembur)').gte('tanggal', from).lte('tanggal', to);
+    if (pegawaiIds.length > 0) {
+      absQuery = absQuery.in('pegawai_id', pegawaiIds);
+      lemburQuery = lemburQuery.in('pegawai_id', pegawaiIds);
+    }
+    const [absRes, lemburRes] = await Promise.all([absQuery, lemburQuery]);
+    if (absRes.error) throw absRes.error;
+    if (lemburRes.error) throw lemburRes.error;
+    const absData = absRes.data || [];
+    const lemburData = lemburRes.data || [];
+    saveCache(cacheKey, { absData, lemburData });
+    renderRekap(absData, lemburData, from, to);
+  } catch (e) {
+    showToast('Gagal: ' + (e.message || e), 'error');
+    if (cached) { renderRekap(cached.absData || [], cached.lemburData || [], from, to); }
+  } finally { setLoading(false, 'btn-load-rekap'); }
+}
+
+function renderRekap(absData, lemburData, from, to) {
+  const aktif = allPegawai.filter(p => p.aktif !== false);
+  const start = new Date(from + 'T00:00:00');
+  const end = new Date(to + 'T00:00:00');
+  const hariLibur = payrollSettings.hari_libur ?? 5;
+  const hariKerja = hitungHariKerja(start, end, hariLibur);
+
+  document.getElementById('rek-hari-kerja').textContent = hariKerja;
+
+  let totalGaji = 0;
+  const el = document.getElementById('rekap-list');
+
+  if (!aktif.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-title">Tidak ada pegawai aktif</div></div>';
+    document.getElementById('rek-total-gaji').textContent = 'Rp 0';
+    document.getElementById('rek-total-sub').textContent = '0 pegawai · 0 hari kerja';
+    return;
+  }
+
+  const sorted = [...aktif].sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+  let html = '';
+  let totalGajiAll = 0;
+
+  sorted.forEach((p, i) => {
+    const absP = absData.filter(a => a.pegawai_id === p.id);
+    const hadir = absP.filter(a => a.status === 'hadir').length;
+    const lemburP = lemburData.filter(l => l.pegawai_id === p.id);
+    const totalJamLembur = lemburP.reduce((s, l) => s + (l.jam || 0), 0);
+    const totalLemburRupiah = lemburP.reduce((s, l) => s + (l.jam || 0) * (l.upah_per_jam || l.pegawai?.upah_lembur || 0), 0);
+
+    const gajiHarian = p.gaji_harian || p.gaji_pokok || 0;
+    const totalGajiPokok = gajiHarian * hadir;
+    const total = totalGajiPokok + totalLemburRupiah;
+    totalGajiAll += total;
+
+    const clr = avatarColors(i);
+    const upahPerJam = p.upah_lembur || 0;
+
+    // Detail lembur per tanggal
+    let lemburDetailHtml = '';
+    if (totalJamLembur > 0 && totalLemburRupiah > 0) {
+      lemburDetailHtml = `<div class="rekap-lembur-detail">
+        ${lemburP.map(l => {
+          const dt = new Date(l.tanggal + 'T00:00:00');
+          return `<span>📅 ${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')} ⏱ ${l.jam}j × Rp ${(l.upah_per_jam || upahPerJam).toLocaleString('id')} = Rp ${(l.jam * (l.upah_per_jam || upahPerJam)).toLocaleString('id')}</span>`;
+        }).join('')}
+      </div>`;
+    }
+
+    html += `
+      <div class="rekap-accordion" id="rekap-acc-${p.id}">
+        <div class="rekap-header" onclick="toggleRekap(${p.id})">
+          <div class="rekap-header-left">
+            <div class="rh-avatar" style="background:${clr.bg};color:${clr.fg}">${p.nama.charAt(0).toUpperCase()}</div>
+            <span class="rh-name">${p.nama}</span>
+            <span class="rh-role">${p.jabatan || 'Pegawai'}</span>
+            <span class="rh-total">${rp(total)}</span>
+          </div>
+          <div class="rekap-header-right">
+            <button class="rh-print" onclick="event.stopPropagation(); printRekap(${p.id})" title="Cetak rekap">🖨️</button>
+            <span class="rh-toggle" id="rekap-toggle-${p.id}">▼</span>
+          </div>
+        </div>
+        <div class="rekap-body" id="rekap-body-${p.id}">
+          <div class="rekap-stats-grid">
+            <div class="stat-box stat-hadir"><div class="num">${hadir}</div><div class="lbl">✅ Hari Hadir</div></div>
+            <div class="stat-box stat-gaji"><div class="num">${rp(gajiHarian)}</div><div class="lbl">💰 Gaji / Hari</div></div>
+            <div class="stat-box stat-lembur"><div class="num">${totalJamLembur}j</div><div class="lbl">⏱ Total Lembur</div></div>
+          </div>
+
+          <div class="rekap-perhitungan">
+            <div class="label">📊 RINCIAN PERHITUNGAN</div>
+            <div class="row"><span>Gaji Pokok</span><span>${hadir} hari × ${rp(gajiHarian)} = <b>${rp(totalGajiPokok)}</b></span></div>
+            ${totalLemburRupiah > 0 ? `
+              <div class="row"><span>Lembur</span><span>${totalJamLembur} jam × Rp ${upahPerJam.toLocaleString('id')} = <b>${rp(totalLemburRupiah)}</b></span></div>
+              ${lemburDetailHtml}
+            ` : `
+              <div class="row" style="color:var(--text-muted)"><span>Lembur</span><span>— tidak ada</span></div>
+            `}
+            <div class="row total"><span>TOTAL GAJI</span><span>${rp(total)}</span></div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  el.innerHTML = html;
+  document.getElementById('rek-total-gaji').textContent = rp(totalGajiAll);
+  document.getElementById('rek-total-sub').textContent = `${aktif.length} pegawai · ${hariKerja} hari kerja`;
+}
+
+// ============================================================
+// CABANG
+// ============================================================
+async function loadCabangFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const id = parseInt(params.get('cabang'));
+  const nama = params.get('nama');
+  if (id && nama) {
+    selectedCabangId = id;
+    document.getElementById('cabang-label').textContent = nama;
+  } else {
+    // FIX: default ke cabang_id = 1 agar SELALU sinkron dengan
+    // absen-scan.html dan qr-generator.html (yang hardcode cabang=1).
+    // Jangan ambil "cabang pertama dari DB" karena id-nya bisa berbeda
+    // dari 1, sehingga setting jam operasional tersimpan di cabang_id
+    // yang berbeda dari yang dibaca QR/absen-scan.
+    selectedCabangId = 1;
+    try {
+      const { data } = await sb.from('cabang').select('id, nama').eq('id', 1).maybeSingle();
+      if (data) {
+        document.getElementById('cabang-label').textContent = data.nama;
+      } else {
+        console.warn('⚠️ Cabang dengan id=1 tidak ditemukan di tabel cabang!');
+        document.getElementById('cabang-label').textContent = 'Cabang Utama';
+      }
+    } catch (e) { console.warn('Gagal load cabang:', e); }
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function setProgress(pct, step) {
+  const bar = document.getElementById('ls-bar');
+  const pctEl = document.getElementById('ls-pct');
+  const stepEl = document.getElementById('ls-step');
+  if (bar) bar.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = pct + '%';
+  if (step && stepEl) stepEl.textContent = step;
+}
+
+function hideLoadingScreen() {
+  const screen = document.getElementById('loading-screen');
+  if (screen) { screen.classList.add('hide'); setTimeout(() => screen.style.display = 'none', 500); }
+}
+
+async function init() {
+  updateNetworkStatus(navigator.onLine);
+
+  const dateInput = document.getElementById('abs-date');
+  if (dateInput) {
+    dateInput.value = todayStr();
+    dateInput.max = todayStr();
+  }
+  const lemburDate = document.getElementById('lembur-tanggal');
+  if (lemburDate) lemburDate.value = todayStr();
+
+  await loadCabangFromURL();
+
+  const cachedPegawai = getCache('pegawai_' + selectedCabangId);
+  if (cachedPegawai) { allPegawai = cachedPegawai; renderPegawai(); populateLemburSelect(); }
+
+  setProgress(15, 'Memuat pengaturan...');
+  await loadPayrollSettings();
+  await loadJamOperasional();
+  await loadJamOperasionalPulang();
+  await loadJamKerja();
+  renderAbsShortcuts();
+  
+  setProgress(30, 'Memuat bagian...');
+  await loadBagian();
+  setProgress(45, 'Memuat data pegawai...');
+  try {
+    await loadPegawai();
+    setProgress(65, 'Memuat absensi...');
+    try { await loadAbsensi(); } catch (e) { console.warn('Absensi:', e); }
+    setProgress(80, 'Memuat lembur...');
+    try { await loadLembur(); } catch (e) { console.warn('Lembur:', e); }
+    setProgress(90, 'Memuat rekap...');
+    updateRekapPillLabels();
+    try { await loadRekap(); } catch (e) { console.warn('Rekap:', e); }
+    setProgress(100, 'Siap!');
+    await new Promise(r => setTimeout(r, 350));
+    hideLoadingScreen();
+  } catch (e) {
+    console.error('Init error:', e);
+    showToast('Gagal memuat data: ' + (e.message || 'Unknown'), 'error');
+    setTimeout(hideLoadingScreen, 3000);
+  }
+}
+
+window.addEventListener('load', () => { init(); });
+window.addEventListener('beforeunload', (e) => {
+  if (absDirty) { e.preventDefault(); e.returnValue = ''; }
+});
+</script>
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-card">
+    <div class="confirm-icon" id="confirm-icon">⚠️</div>
+    <div class="confirm-title" id="confirm-title">Konfirmasi</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-actions">
+      <button class="confirm-btn-cancel" onclick="resolveConfirm(false)">Batal</button>
+      <button class="confirm-btn-ok" id="confirm-ok-btn" onclick="resolveConfirm(true)">Ya, Hapus</button>
+    </div>
+  </div>
+</div>
+<script>
+// Fallback blokir pull-to-refresh untuk WebView/browser yang belum support overscroll-behavior CSS
+(function(){
+  // Browser/WebView modern sudah handle ini lewat CSS overscroll-behavior (lihat html/body di atas).
+  // Listener touchmove non-passive di bawah ini berat (jalan di main thread tiap gesture),
+  // jadi kalau CSS-nya udah didukung, skip aja biar scroll tetap smooth.
+  if ('overscrollBehaviorY' in document.documentElement.style) return;
+
+  var startY = 0;
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length === 1) startY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e){
+    if (e.touches.length !== 1) return;
+    var y = e.touches[0].clientY;
+    var scroller = document.scrollingElement || document.documentElement;
+    if (scroller.scrollTop <= 0 && y > startY) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
+</script>
+</body>
+</html>

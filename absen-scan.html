@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Absen QR</title>
+  
+  <!-- ========================================================== -->
+  <!-- CONFIG.JS (PASTIKAN ADA)                                   -->
+  <!-- ========================================================== -->
+  <script src="config.js"></script>
+  <!-- FIX: library Supabase-nya kemarin tidak ter-load, makanya absen-scan
+       selalu pakai jam default (07:00-09:00) dan gagal load Supabase. -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #fef9ef;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 8px 40px rgba(15,155,142,0.12);
+      border: 1px solid #ece4d3;
+      text-align: center;
+    }
+    .icon { font-size: 56px; margin-bottom: 8px; }
+    .title {
+      font-family: 'Baloo 2', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: #2b2620;
+    }
+    .sub {
+      font-size: 14px;
+      color: #8a8071;
+      margin-bottom: 16px;
+    }
+    .jam-info {
+      background: #eef2ff;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #4f46e5;
+      font-weight: 600;
+    }
+    .jam-info .jam-besar {
+      font-size: 32px;
+      font-weight: 800;
+      display: block;
+      margin-top: 4px;
+    }
+    .jam-info.tutup {
+      background: #fdeaec;
+      color: #e8485f;
+    }
+    .jam-info.buka {
+      background: #e6f9ef;
+      color: #0a9d5c;
+    }
+    .form-group { margin-bottom: 14px; text-align: left; }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #2b2620;
+      display: block;
+      margin-bottom: 4px;
+    }
+    /* ===================== CUSTOM DROPDOWN TRIGGER ===================== */
+    .cdd { position: relative; }
+    .cdd-trigger {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ece4d3;
+      border-radius: 10px;
+      font-size: 16px;
+      font-family: inherit;
+      background: white;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s;
+    }
+    .cdd-trigger span.cdd-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #2b2620;
+    }
+    .cdd-trigger span.cdd-text.placeholder { color: #999; font-weight: 400; }
+    .cdd-trigger .cdd-arrow {
+      font-size: 12px;
+      color: #8a8071;
+      transition: transform 0.15s;
+      flex-shrink: 0;
+    }
+    .cdd.open .cdd-trigger { border-color: #0f9b8e; }
+    .cdd.open .cdd-trigger .cdd-arrow { transform: rotate(180deg); }
+    .cdd.disabled .cdd-trigger {
+      background: #f5f5f5;
+      color: #999;
+      cursor: not-allowed;
+    }
+
+    /* ===================== BOTTOM SHEET ===================== */
+    .bs-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .bs-overlay.show { opacity: 1; pointer-events: all; }
+    .bs-sheet {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      background: white;
+      border-radius: 20px 20px 0 0;
+      z-index: 101;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.1, 0.64, 1);
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    }
+    .bs-sheet.show { transform: translateY(0); }
+    .bs-handle-bar {
+      width: 40px; height: 4px;
+      background: #ddd;
+      border-radius: 2px;
+      margin: 12px auto 0;
+      flex-shrink: 0;
+    }
+    .bs-header {
+      padding: 14px 20px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #8a8071;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #ece4d3;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .bs-close {
+      font-size: 20px;
+      color: #8a8071;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .bs-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 8px 0 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .bs-item {
+      padding: 16px 20px;
+      font-size: 17px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #2b2620;
+      cursor: pointer;
+      border-bottom: 1px solid #f3ede3;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.1s;
+    }
+    .bs-item:last-child { border-bottom: none; }
+    .bs-item:active { background: #f0f9f7; }
+    .bs-item.selected { background: #e6f9ef; color: #0a9d5c; }
+    .bs-item .bs-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 15px;
+      font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .bs-item.selected .bs-avatar { background: #d1fae5; color: #0a9d5c; }
+    .bs-item .bs-name-wrap { flex: 1; overflow: hidden; }
+    .bs-item .bs-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bs-item .bs-jabatan { font-size: 11px; font-weight: 400; color: #8a8071; text-transform: none; margin-top: 1px; display: block; }
+    .bs-item.selected .bs-jabatan { color: #0a9d5c; }
+    .bs-item .bs-check { font-size: 18px; flex-shrink: 0; }
+    .bs-empty {
+      padding: 40px 20px;
+      font-size: 14px;
+      color: #8a8071;
+      text-align: center;
+      text-transform: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0f9b8e, #0b756c);
+      color: white;
+    }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-success {
+      background: #e6f9ef;
+      color: #0a9d5c;
+      border: 2px solid #0a9d5c;
+      cursor: default;
+    }
+    .btn-secondary {
+      background: #ece4d3;
+      color: #2b2620;
+      margin-top: 8px;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      margin: 12px 0;
+    }
+    .status.success { background: #e6f9ef; color: #0a9d5c; }
+    .status.error { background: #fdeaec; color: #e8485f; }
+    .status.info { background: #eef2ff; color: #4f46e5; }
+    .status.warning { background: #fff8e6; color: #b45309; }
+    .hidden { display: none; }
+    .readonly-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: #fdeaec;
+      color: #e8485f;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .readonly-badge.buka {
+      background: #e6f9ef;
+      color: #0a9d5c;
+    }
+    .info-text {
+      font-size: 11px;
+      color: #8a8071;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="icon" id="icon">📷</div>
+  <div class="title" id="title">Absen QR</div>
+  <div class="sub" id="sub">Scan QR untuk absen</div>
+
+  <!-- STATUS JAM -->
+  <div class="jam-info" id="jam-info">
+    <span id="jam-label">⏰ Jam Operasional</span>
+    <span class="jam-besar" id="jam-display">--:--</span>
+    <span id="jam-status" style="font-size:12px;font-weight:400;display:block;margin-top:4px;">Loading...</span>
+  </div>
+
+  <!-- BADGE STATUS -->
+  <div id="badge-container">
+    <span class="readonly-badge" id="badge-status">⏳ Mengecek...</span>
+  </div>
+
+  <!-- FORM ABSEN -->
+  <div id="form-absen">
+    <div class="form-group">
+      <label>👤 Nama Anda</label>
+      <div class="cdd disabled" id="pegawai-dropdown">
+        <div class="cdd-trigger" id="pegawai-trigger" tabindex="-1">
+          <span class="cdd-text placeholder" id="pegawai-trigger-text">— Pilih Nama —</span>
+          <span class="cdd-arrow">▾</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="status" class="status hidden"></div>
+
+    <button class="btn btn-primary" id="btn-absen" onclick="absen()" disabled>
+      ✅ Absen Sekarang
+    </button>
+  </div>
+
+  <!-- TAMPILAN SETELAH ABSEN (READONLY) -->
+  <div id="sudah-absen" class="hidden">
+    <div style="padding:20px 0;">
+      <div style="font-size:48px;">✅</div>
+      <div style="font-size:20px;font-weight:800;color:#0a9d5c;margin:8px 0;" id="sudah-absen-title">Sudah Absen!</div>
+      <div style="font-size:14px;color:#8a8071;" id="absen-nama">-</div>
+      <div style="font-size:12px;color:#8a8071;margin-top:4px;" id="absen-waktu">-</div>
+    </div>
+    <button class="btn btn-success" disabled id="btn-sudah-absen">
+      ✅ Sudah Absen
+    </button>
+  </div>
+
+  <div class="info-text" id="info-text">
+    ⏰ Buka: 07:00 - 09:00 WIB
+  </div>
+</div>
+
+<!-- BOTTOM SHEET PILIH NAMA -->
+<div class="bs-overlay" id="bs-overlay"></div>
+<div class="bs-sheet" id="bs-sheet">
+  <div class="bs-handle-bar"></div>
+  <div class="bs-header">
+    <span>👤 Pilih Nama Anda</span>
+    <span class="bs-close" id="bs-close">✕</span>
+  </div>
+  <div class="bs-list" id="bs-list"></div>
+</div>
+
+<script>
+// ============================================================
+// CEK APAKAH CONFIG.JS TERBACA
+// ============================================================
+console.log('🔍 Checking config.js...');
+console.log('SUPABASE_URL:', window.SUPABASE_URL);
+console.log('SUPABASE_KEY:', window.SUPABASE_KEY);
+
+// ============================================================
+// INISIALISASI SUPABASE
+// ============================================================
+let sb = null;
+let supabaseConnected = false;
+
+if (window.SUPABASE_URL && window.SUPABASE_KEY) {
+  try {
+    if (typeof supabase !== 'undefined') {
+      sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+      supabaseConnected = true;
+      console.log('✅ Supabase connected!');
+    } else {
+      console.warn('⚠️ Supabase library not loaded!');
+    }
+  } catch (e) {
+    console.error('❌ Supabase init error:', e);
+  }
+} else {
+  console.warn('⚠️ config.js not loaded properly!');
+  // TAMPILKAN PESAN DI HALAMAN
+  document.getElementById('jam-status').textContent = '⚠️ Config tidak terbaca';
+}
+
+// ============================================================
+// VARIABEL GLOBAL
+// ============================================================
+const _params = new URLSearchParams(window.location.search);
+const MODE = (_params.get('mode') === 'pulang') ? 'pulang' : 'masuk'; // 'masuk' | 'pulang'
+const SETTING_KEY = (MODE === 'pulang') ? 'jam_operasional_pulang' : 'jam_operasional';
+const DEFAULT_JAM = (MODE === 'pulang') ? { buka: '16:00', tutup: '18:00' } : { buka: '07:00', tutup: '09:00' };
+
+let JAM_BUKA = parseInt(DEFAULT_JAM.buka.split(':')[0]);
+let JAM_TUTUP = parseInt(DEFAULT_JAM.tutup.split(':')[0]);
+let jamStrBuka = DEFAULT_JAM.buka;
+let jamStrTutup = DEFAULT_JAM.tutup;
+let pegawaiList = [];
+let selectedPegawai = null;
+let sudahAbsenHariIni = false;
+let isOpen = false;
+
+// Teks UI sesuai mode
+const TEKS = MODE === 'pulang'
+  ? {
+      title: 'Absen Pulang', sub: 'Scan QR untuk absen pulang',
+      btnIdle: '🚪 Absen Pulang Sekarang', btnDone: '✅ Sudah Absen Pulang',
+      sukses: 'ABSEN PULANG BERHASIL!', selesai: 'Selamat istirahat',
+      labelWaktu: '🚪 Pulang', emptyList: 'Tidak ada nama tersisa (semua sudah absen pulang)',
+      sudahSemua: '🎉 Semua pegawai sudah absen pulang hari ini'
+    }
+  : {
+      title: 'Absen QR', sub: 'Scan QR untuk absen',
+      btnIdle: '✅ Absen Sekarang', btnDone: '✅ Sudah Absen',
+      sukses: 'ABSEN BERHASIL!', selesai: 'Selamat bekerja',
+      labelWaktu: '⏰', emptyList: 'Tidak ada nama tersisa (semua sudah absen)',
+      sudahSemua: '🎉 Semua pegawai sudah absen hari ini'
+    };
+
+document.getElementById('title').textContent = TEKS.title;
+document.getElementById('sub').textContent = TEKS.sub;
+document.getElementById('btn-absen').textContent = TEKS.btnIdle;
+document.getElementById('btn-sudah-absen').textContent = TEKS.btnDone;
+document.getElementById('sudah-absen-title').textContent = MODE === 'pulang' ? 'Sudah Absen Pulang!' : 'Sudah Absen!';
+document.title = TEKS.title;
+
+// ============================================================
+// LOAD JAM OPERASIONAL (PASTI JALAN)
+// ============================================================
+async function loadJamOperasional() {
+  // UPDATE: PASTIKAN JAM TERISI (JANGAN LOADING TERUS)
+  const statusEl = document.getElementById('jam-status');
+  
+  // SET DEFAULT DULU (BIAR TIDAK LOADING TERUS)
+  document.getElementById('info-text').textContent = `⏰ Buka: ${DEFAULT_JAM.buka} - ${DEFAULT_JAM.tutup} WIB`;
+  statusEl.textContent = '⏳ Memuat pengaturan...';
+  
+  if (!sb || !supabaseConnected) {
+    // JIKA TIDAK KONEK, PAKAI DEFAULT
+    jamStrBuka = DEFAULT_JAM.buka;
+    jamStrTutup = DEFAULT_JAM.tutup;
+    JAM_BUKA = parseInt(jamStrBuka.split(':')[0]);
+    JAM_TUTUP = parseInt(jamStrTutup.split(':')[0]);
+    document.getElementById('info-text').textContent = `⏰ Buka: ${jamStrBuka} - ${jamStrTutup} WIB`;
+    statusEl.textContent = `✅ Default (${jamStrBuka} - ${jamStrTutup})`;
+    console.log('⚠️ Using default jam (no Supabase)');
+    return;
+  }
+  
+  try {
+    // Ambil cabang_id dari URL
+    const params = new URLSearchParams(window.location.search);
+    const cabangId = params.get('cabang') || '1';
+    
+    console.log('📥 Load jam (' + SETTING_KEY + ') untuk cabang:', cabangId);
+    
+    const { data, error } = await sb
+      .from('settings')
+      .select('value')
+      .eq('key', SETTING_KEY)
+      .eq('cabang_id', parseInt(cabangId))
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    let buka = DEFAULT_JAM.buka;
+    let tutup = DEFAULT_JAM.tutup;
+    
+    if (data && data.value) {
+      try {
+        const jam = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+        buka = jam.buka || DEFAULT_JAM.buka;
+        tutup = jam.tutup || DEFAULT_JAM.tutup;
+      } catch(e) {
+        console.warn('Parse jam error:', e);
+      }
+    }
+    
+    // Set variable global
+    jamStrBuka = buka;
+    jamStrTutup = tutup;
+    JAM_BUKA = parseInt(buka.split(':')[0]);
+    JAM_TUTUP = parseInt(tutup.split(':')[0]);
+    
+    console.log('✅ Jam loaded:', JAM_BUKA, '-', JAM_TUTUP);
+    
+    // Update info di UI
+    document.getElementById('info-text').textContent = `⏰ Buka: ${buka} - ${tutup} WIB`;
+    statusEl.textContent = `✅ ${buka} - ${tutup}`;
+    
+  } catch (e) {
+    console.error('❌ Load jam error:', e);
+    // TETAP PAKAI DEFAULT
+    jamStrBuka = DEFAULT_JAM.buka;
+    jamStrTutup = DEFAULT_JAM.tutup;
+    JAM_BUKA = parseInt(jamStrBuka.split(':')[0]);
+    JAM_TUTUP = parseInt(jamStrTutup.split(':')[0]);
+    document.getElementById('info-text').textContent = `⏰ Buka: ${jamStrBuka} - ${jamStrTutup} WIB`;
+    statusEl.textContent = '⚠️ Gagal load, pakai default';
+  }
+}
+
+// ============================================================
+// CEK JAM OPERASIONAL
+// ============================================================
+function cekJamOperasional() {
+  const now = new Date();
+  const jam = now.getHours();
+  const menit = now.getMinutes();
+  const detik = now.getSeconds();
+
+  document.getElementById('jam-display').textContent = 
+    `${String(jam).padStart(2, '0')}:${String(menit).padStart(2, '0')}:${String(detik).padStart(2, '0')}`;
+
+  // Cek apakah dalam jam operasional
+  isOpen = (jam >= JAM_BUKA && jam < JAM_TUTUP);
+
+  const info = document.getElementById('jam-info');
+  const statusEl = document.getElementById('jam-status');
+  const badge = document.getElementById('badge-status');
+
+  if (isOpen) {
+    info.className = 'jam-info buka';
+    badge.className = 'readonly-badge buka';
+    badge.textContent = '✅ BUKA';
+    document.getElementById('icon').textContent = MODE === 'pulang' ? '🚪' : '📷';
+    document.getElementById('title').textContent = TEKS.title;
+    document.getElementById('sub').textContent = TEKS.sub;
+    statusEl.textContent = '✅ Buka — Silakan absen!';
+  } else {
+    info.className = 'jam-info tutup';
+    const nextOpen = new Date(now);
+    nextOpen.setHours(JAM_BUKA, 0, 0, 0);
+    if (now.getHours() >= JAM_TUTUP) {
+      nextOpen.setDate(nextOpen.getDate() + 1);
+    }
+    const diffMs = nextOpen - now;
+    const diffJam = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMenit = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    statusEl.textContent = `🔒 Tutup — Buka dalam ${diffJam}j ${diffMenit}m lagi`;
+    badge.className = 'readonly-badge';
+    badge.textContent = '🔒 TUTUP';
+    document.getElementById('icon').textContent = '🔒';
+    document.getElementById('title').textContent = 'Belum Waktunya';
+    document.getElementById('sub').textContent = `Absen hanya bisa ${jamStrBuka} - ${jamStrTutup}`;
+  }
+
+  // Update form
+  const dropdown = document.getElementById('pegawai-dropdown');
+  const btn = document.getElementById('btn-absen');
+
+  if (isOpen && !sudahAbsenHariIni) {
+    setDropdownDisabled(false);
+    btn.disabled = false;
+    document.getElementById('form-absen').style.display = 'block';
+    document.getElementById('sudah-absen').classList.add('hidden');
+  } else {
+    setDropdownDisabled(true);
+    btn.disabled = true;
+  }
+
+  // Update setiap detik
+  setTimeout(cekJamOperasional, 1000);
+}
+
+// ============================================================
+// LOAD PEGAWAI
+// ============================================================
+async function loadPegawai() {
+  if (!sb || !supabaseConnected) {
+    console.warn('⚠️ Cannot load pegawai, Supabase not connected');
+    return;
+  }
+
+  try {
+    const { data, error } = await sb
+      .from('pegawai')
+      .select('id, nama, jabatan, aktif')
+      .eq('aktif', true)
+      .order('nama');
+
+    if (error) throw error;
+    let list = data || [];
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (MODE === 'pulang') {
+      // ABSEN PULANG: hanya tampilkan pegawai yang SUDAH absen masuk
+      // hari ini tapi BELUM absen pulang (jam_keluar masih kosong).
+      try {
+        const { data: absData, error: absErr } = await sb
+          .from('absensi')
+          .select('pegawai_id, jam_keluar')
+          .eq('tanggal', today)
+          .eq('status', 'hadir');
+
+        if (absErr) throw absErr;
+
+        const idsBolehPulang = new Set(
+          (absData || []).filter(r => !r.jam_keluar).map(r => r.pegawai_id)
+        );
+        list = list.filter(p => idsBolehPulang.has(p.id));
+      } catch (e2) {
+        console.warn('⚠️ Gagal cek pegawai yang boleh absen pulang:', e2);
+        list = [];
+      }
+    } else {
+      // ABSEN MASUK: keluarkan pegawai yang SUDAH absen masuk hari ini
+      // biar nama mereka tidak muncul lagi di dropdown.
+      try {
+        const { data: sudahData, error: sudahErr } = await sb
+          .from('absensi')
+          .select('pegawai_id')
+          .eq('tanggal', today)
+          .eq('status', 'hadir');
+
+        if (sudahErr) throw sudahErr;
+
+        const idsSudahAbsen = new Set((sudahData || []).map(r => r.pegawai_id));
+        list = list.filter(p => !idsSudahAbsen.has(p.id));
+      } catch (e2) {
+        console.warn('⚠️ Gagal cek pegawai yang sudah absen:', e2);
+      }
+    }
+
+    pegawaiList = list;
+    renderPegawaiDropdown();
+
+    if (pegawaiList.length === 0) {
+      document.getElementById('status').textContent = TEKS.sudahSemua;
+      document.getElementById('status').className = 'status success';
+      document.getElementById('status').classList.remove('hidden');
+      document.getElementById('btn-absen').disabled = true;
+      setDropdownDisabled(true);
+    }
+
+    if (pegawaiList.length === 1) {
+      selectPegawai(pegawaiList[0]);
+    }
+
+  } catch (err) {
+    console.error('Load pegawai error:', err);
+  }
+}
+
+// ============================================================
+// BOTTOM SHEET PILIH NAMA
+// ============================================================
+const cddEl = {
+  wrap: null, trigger: null, triggerText: null
+};
+
+const bsEl = {
+  overlay: null, sheet: null, list: null, close: null
+};
+
+function initPegawaiDropdown() {
+  cddEl.wrap = document.getElementById('pegawai-dropdown');
+  cddEl.trigger = document.getElementById('pegawai-trigger');
+  cddEl.triggerText = document.getElementById('pegawai-trigger-text');
+
+  bsEl.overlay = document.getElementById('bs-overlay');
+  bsEl.sheet   = document.getElementById('bs-sheet');
+  bsEl.list    = document.getElementById('bs-list');
+  bsEl.close   = document.getElementById('bs-close');
+
+  cddEl.trigger.addEventListener('click', () => {
+    if (cddEl.wrap.classList.contains('disabled')) return;
+    openDropdown();
+  });
+
+  bsEl.overlay.addEventListener('click', closeDropdown);
+  bsEl.close.addEventListener('click', closeDropdown);
+}
+
+function openDropdown() {
+  if (cddEl.wrap.classList.contains('disabled')) return;
+  renderPegawaiDropdown();
+  // Sedikit delay agar DOM siap sebelum animasi
+  requestAnimationFrame(() => {
+    bsEl.overlay.classList.add('show');
+    bsEl.sheet.classList.add('show');
+    cddEl.wrap.classList.add('open');
+  });
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDropdown() {
+  bsEl.overlay.classList.remove('show');
+  bsEl.sheet.classList.remove('show');
+  cddEl.wrap.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function setDropdownDisabled(disabled) {
+  if (disabled) {
+    cddEl.wrap.classList.add('disabled');
+    closeDropdown();
+  } else {
+    cddEl.wrap.classList.remove('disabled');
+  }
+}
+
+function renderPegawaiDropdown() {
+  if (!bsEl.list) return;
+  bsEl.list.innerHTML = '';
+
+  if (pegawaiList.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'bs-empty';
+    empty.textContent = TEKS.emptyList;
+    bsEl.list.appendChild(empty);
+    return;
+  }
+
+  pegawaiList.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'bs-item';
+    if (selectedPegawai && selectedPegawai.id === p.id) item.classList.add('selected');
+
+    const initial = (p.nama || '?').charAt(0).toUpperCase();
+    item.innerHTML = `
+      <div class="bs-avatar">${initial}</div>
+      <div class="bs-name-wrap">
+        <span class="bs-name">${p.nama}</span>
+        ${p.jabatan ? `<span class="bs-jabatan">${p.jabatan}</span>` : ''}
+      </div>
+      ${(selectedPegawai && selectedPegawai.id === p.id) ? '<span class="bs-check">✅</span>' : ''}
+    `;
+    item.addEventListener('click', () => selectPegawai(p));
+    bsEl.list.appendChild(item);
+  });
+}
+
+function selectPegawai(p) {
+  selectedPegawai = p;
+  cddEl.triggerText.textContent = p.nama;
+  cddEl.triggerText.classList.remove('placeholder');
+  closeDropdown();
+  cekSudahAbsen();
+}
+
+initPegawaiDropdown();
+
+// ============================================================
+// CEK SUDAH ABSEN HARI INI?
+// ============================================================
+async function cekSudahAbsen() {
+  if (!selectedPegawai || !sb || !supabaseConnected) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  try {
+    const { data, error } = await sb
+      .from('absensi')
+      .select('id, jam_masuk, jam_keluar')
+      .eq('pegawai_id', selectedPegawai.id)
+      .eq('tanggal', today)
+      .eq('status', 'hadir')
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const sudahSelesai = MODE === 'pulang'
+      ? !!(data && data.jam_keluar)   // pulang: dianggap "selesai" kalau jam_keluar sudah terisi
+      : !!data;                       // masuk: dianggap "selesai" kalau row absensi sudah ada
+
+    if (sudahSelesai) {
+      sudahAbsenHariIni = true;
+      document.getElementById('form-absen').style.display = 'none';
+      document.getElementById('sudah-absen').classList.remove('hidden');
+      document.getElementById('absen-nama').textContent = selectedPegawai.nama;
+      const waktu = MODE === 'pulang' ? data.jam_keluar : data.jam_masuk;
+      document.getElementById('absen-waktu').textContent =
+        `${TEKS.labelWaktu} ${waktu ? new Date(waktu).toLocaleTimeString('id') : '-'}`;
+      document.getElementById('btn-absen').disabled = true;
+      setDropdownDisabled(true);
+    } else {
+      sudahAbsenHariIni = false;
+      document.getElementById('form-absen').style.display = 'block';
+      document.getElementById('sudah-absen').classList.add('hidden');
+    }
+  } catch (err) {
+    console.error('Cek absen error:', err);
+  }
+}
+
+// ============================================================
+// FUNGSI ABSEN
+// ============================================================
+function setStatus(msg, type = 'info') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+  el.classList.remove('hidden');
+}
+
+async function absen() {
+  if (!selectedPegawai) {
+    alert('Pilih nama Anda dulu!');
+    return;
+  }
+
+  // Cek jam lagi
+  const now = new Date();
+  const jam = now.getHours();
+  if (jam < JAM_BUKA || jam >= JAM_TUTUP) {
+    setStatus('❌ Di luar jam operasional!', 'error');
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: existing, error: cekErr } = await sb
+    .from('absensi')
+    .select('id, jam_keluar')
+    .eq('pegawai_id', selectedPegawai.id)
+    .eq('tanggal', today)
+    .eq('status', 'hadir')
+    .maybeSingle();
+
+  if (cekErr) {
+    setStatus('❌ Gagal cek data: ' + (cekErr.message || 'Unknown'), 'error');
+    return;
+  }
+
+  if (MODE === 'pulang') {
+    if (!existing) {
+      setStatus('❌ Belum absen masuk hari ini, tidak bisa absen pulang!', 'error');
+      return;
+    }
+    if (existing.jam_keluar) {
+      setStatus('✅ Anda sudah absen pulang hari ini!', 'success');
+      document.getElementById('btn-absen').disabled = true;
+      return;
+    }
+  } else {
+    if (existing) {
+      setStatus('✅ Anda sudah absen hari ini!', 'success');
+      document.getElementById('btn-absen').disabled = true;
+      return;
+    }
+  }
+
+  const btn = document.getElementById('btn-absen');
+  btn.disabled = true;
+  btn.textContent = '⏳ Memproses...';
+  setStatus('⏳ Menyimpan...', 'info');
+
+  try {
+    let error;
+    if (MODE === 'pulang') {
+      ({ error } = await sb
+        .from('absensi')
+        .update({ jam_keluar: new Date().toISOString() })
+        .eq('id', existing.id));
+    } else {
+      ({ error } = await sb
+        .from('absensi')
+        .insert({
+          pegawai_id: selectedPegawai.id,
+          tanggal: today,
+          status: 'hadir',
+          lembur_jam: 0,
+          jam_masuk: new Date().toISOString()
+        }));
+    }
+
+    if (error) throw error;
+
+    sudahAbsenHariIni = true;
+
+    setStatus(`🎉 ${selectedPegawai.nama} — ${TEKS.sukses}`, 'success');
+    document.getElementById('icon').textContent = '✅';
+    document.getElementById('title').textContent = MODE === 'pulang' ? 'Absen Pulang Berhasil!' : 'Absen Berhasil!';
+    document.getElementById('sub').textContent = `${TEKS.selesai}, ${selectedPegawai.nama}! 💪`;
+    btn.disabled = true;
+    btn.textContent = '✅ Selesai';
+
+    // Keluarkan nama yang baru absen dari list dropdown
+    pegawaiList = pegawaiList.filter(p => p.id !== selectedPegawai.id);
+    renderPegawaiDropdown();
+
+    document.getElementById('form-absen').style.display = 'none';
+    document.getElementById('sudah-absen').classList.remove('hidden');
+    document.getElementById('absen-nama').textContent = selectedPegawai.nama;
+    document.getElementById('absen-waktu').textContent = 
+      `${TEKS.labelWaktu} ${new Date().toLocaleTimeString('id')}`;
+
+    try {
+      // Beep sederhana pakai Web Audio API (tidak perlu internet/file eksternal)
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch(e) {}
+
+  } catch (err) {
+    console.error('Error:', err);
+    setStatus('❌ Gagal: ' + (err.message || 'Unknown'), 'error');
+    btn.disabled = false;
+    btn.textContent = '✅ Coba Lagi';
+  }
+}
+
+// ============================================================
+// CEK DAN TAMPILKAN STATUS
+// ============================================================
+// (listener pemilihan nama sudah ditangani langsung di selectPegawai())
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  console.log('🚀 Init absen-scan.html...');
+  
+  // 1. Load jam
+  await loadJamOperasional();
+  
+  // 2. Load pegawai
+  await loadPegawai();
+  
+  // 3. Mulai cek jam
+  cekJamOperasional();
+  
+  // 4. Cek status absen
+  setTimeout(cekSudahAbsen, 500);
+  
+  console.log('✅ Init selesai');
+}
+
+// Jalankan
+init();
+</script>
+</body>
+</html>

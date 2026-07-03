@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>SRI REJEKI — Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="theme-color" content="#0f9b8e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sri Rejeki">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: #fef9ef; overscroll-behavior: none; height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 10% 15%, rgba(15,155,142,0.09) 0, transparent 50%),
+    radial-gradient(circle at 90% 85%, rgba(45,212,191,0.10) 0, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(255,107,157,0.04) 0, transparent 60%);
+  color: var(--text);
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  overscroll-behavior: none;
+  transition: opacity 0.32s ease, transform 0.32s ease;
+}
+
+body.fade-out {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body, body.fade-out { transition: none !important; opacity: 1 !important; transform: none !important; }
+}
+
+:root {
+  --primary: #0f9b8e;
+  --primary-dark: #0b756c;
+  --primary-light: #e3f9f5;
+  --accent: #2dd4bf;
+  --bg: #fef9ef;
+  --card: #ffffff;
+  --border: #ece4d3;
+  --text: #2b2620;
+  --text-muted: #8a8071;
+  --success: #0a9d5c;
+  --danger: #e8485f;
+  --danger-bg: #fdeaec;
+  --radius: 22px;
+  --shadow: 0 8px 32px rgba(43,38,32,0.10);
+  --shadow-hover: 0 16px 48px rgba(15,155,142,0.18);
+}
+
+.header {
+  padding: clamp(12px, 4vh, 32px) 32px 0;
+  text-align: center;
+  flex-shrink: 0;
+}
+.logo-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.logo-icon {
+  width: clamp(40px, 7vh, 56px); height: clamp(40px, 7vh, 56px);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(15,155,142,0.30);
+  flex-shrink: 0;
+}
+.app-name {
+  font-family: 'Baloo 2', sans-serif;
+  font-size: clamp(22px, 4vh, 32px);
+  font-weight: 800;
+  color: var(--primary-dark);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.app-name span { color: var(--primary); }
+.tagline {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.grid-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(10px, 3vh, 36px) 32px clamp(10px, 3vh, 40px);
+  min-height: 0;
+  overflow: hidden;
+}
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(10px, 2.5vh, 20px);
+  max-width: 780px;
+  width: 100%;
+  max-height: 100%;
+}
+.module-card {
+  background: var(--card);
+  border-radius: 26px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 30px 22px 26px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform 0.28s cubic-bezier(.22,.85,.32,1.1), box-shadow 0.28s ease, border-color 0.28s ease;
+  position: relative;
+  overflow: hidden;
+}
+.module-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  border-radius: 26px;
+}
+.module-card::after {
+  content: '';
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  top: -58px;
+  left: -50px;
+  opacity: 0.12;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+.module-card:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: var(--shadow-hover);
+}
+.module-card:hover::before { opacity: 1; }
+.module-card:hover::after { opacity: 0.20; transform: scale(1.12); }
+.module-card:active { transform: translateY(-2px) scale(1.005); }
+
+.card-watermark {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  bottom: -28px;
+  right: -28px;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.module-card:hover .card-watermark { opacity: 0.12; transform: rotate(6deg) scale(1.05); }
+
+.card-kasir::before { background: linear-gradient(135deg, rgba(15,155,142,0.05), transparent); }
+.card-kasir::after { background: #0f9b8e; }
+.card-kasir:hover { border-color: #0f9b8e; }
+.icon-kasir { background: linear-gradient(135deg, #0f9b8e, #0b756c); box-shadow: 0 12px 24px -8px rgba(15,155,142,0.55); }
+
+.card-owner::before { background: linear-gradient(135deg, rgba(15,155,142,0.05), transparent); }
+.card-owner::after { background: #0f9b8e; }
+.card-owner:hover { border-color: #0f9b8e; }
+.icon-owner { background: linear-gradient(135deg, #0f9b8e, #0b756c); box-shadow: 0 12px 24px -8px rgba(15,155,142,0.55); }
+
+.card-master::before { background: linear-gradient(135deg, rgba(15,155,142,0.05), transparent); }
+.card-master::after { background: #0f9b8e; }
+.card-master:hover { border-color: #0f9b8e; }
+.icon-master { background: linear-gradient(135deg, #0f9b8e, #0b756c); box-shadow: 0 12px 24px -8px rgba(15,155,142,0.55); }
+
+.card-payroll::before { background: linear-gradient(135deg, rgba(15,155,142,0.05), transparent); }
+.card-payroll::after { background: #0f9b8e; }
+.card-payroll:hover { border-color: #0f9b8e; }
+.icon-payroll { background: linear-gradient(135deg, #0f9b8e, #0b756c); box-shadow: 0 12px 24px -8px rgba(15,155,142,0.55); }
+
+.card-icon-wrap {
+  width: 60px; height: 60px;
+  border-radius: 22px 22px 22px 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.32s cubic-bezier(.22,.85,.32,1.4), border-radius 0.32s ease;
+}
+.card-icon-wrap svg { width: 28px; height: 28px; }
+.module-card:hover .card-icon-wrap {
+  transform: translateY(-3px) rotate(-6deg);
+  border-radius: 18px;
+}
+
+.card-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-title {
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+.card-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-muted);
+}
+.card-kasir .card-title { color: #0b756c; }
+.card-owner .card-title { color: #0b756c; }
+.card-master .card-title { color: #0b756c; }
+.card-payroll .card-title { color: #0b756c; }
+
+.card-go {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transform: translate(8px, 8px) scale(0.7);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  z-index: 1;
+}
+.card-go svg { width: 14px; height: 14px; }
+.module-card:hover .card-go { opacity: 1; transform: translate(0,0) scale(1); }
+.card-kasir .card-go { background: #0f9b8e; }
+.card-owner .card-go { background: #0f9b8e; }
+.card-master .card-go { background: #0f9b8e; }
+.card-payroll .card-go { background: #0f9b8e; }
+
+.footer {
+  text-align: center;
+  padding: 0 32px clamp(10px, 2.5vh, 28px);
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── WATERMARK BACKGROUND HALAMAN ── */
+.page-watermarks {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.page-watermarks svg {
+  position: absolute;
+  stroke: #0f9b8e;
+  opacity: 0.05;
+}
+.wm-1 { width: 280px; top: -50px; left: -70px; transform: rotate(-10deg); }
+.wm-2 { width: 220px; top: 6%; right: -60px; transform: rotate(14deg); }
+.wm-3 { width: 260px; bottom: -60px; left: 4%; transform: rotate(9deg); }
+.wm-4 { width: 230px; bottom: 2%; right: 2%; transform: rotate(-12deg); }
+.wm-5 { width: 190px; top: 38%; left: 44%; transform: rotate(18deg); opacity: 0.035; }
+@media (max-width: 600px) {
+  .wm-1 { width: 200px; }
+  .wm-2 { width: 160px; }
+  .wm-3 { width: 190px; }
+  .wm-4 { width: 170px; }
+  .wm-5 { display: none; }
+}
+
+/* ── MODAL LOGIN ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(43,38,32,0.55);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 420px;
+  width: 100%;
+  min-height: 380px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+  animation: modalPop 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.95) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal h3 {
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.modal-sub {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 6px;
+}
+.form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  background: white;
+  transition: border-color 0.15s;
+}
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(15,155,142,0.1);
+}
+
+/* ── CUSTOM DROPDOWN ── */
+.custom-select-wrap { position: relative; }
+.custom-select-btn {
+  width: 100%;
+  padding: 12px 40px 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  background: white;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  user-select: none;
+}
+.custom-select-btn.has-value { color: var(--text); }
+.custom-select-btn:focus, .custom-select-btn.open {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(15,155,142,0.1);
+}
+.custom-select-btn .caret {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+.custom-select-btn.open .caret {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.custom-select-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid var(--primary);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(15,155,142,0.15);
+  z-index: 200;
+  overflow: hidden;
+  animation: dropdownPop 0.15s ease;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.custom-select-dropdown.open { display: block; }
+
+@keyframes dropdownPop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.custom-select-dropdown::-webkit-scrollbar { width: 6px; }
+.custom-select-dropdown::-webkit-scrollbar-track { background: transparent; }
+.custom-select-dropdown::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+
+.custom-option {
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  transition: background 0.1s;
+}
+.custom-option:hover { background: var(--primary-light); color: var(--primary-dark); }
+.custom-option.selected { background: var(--primary-light); color: var(--primary); }
+.custom-option.placeholder { color: var(--text-muted); font-weight: 500; }
+.custom-option .opt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+  opacity: 0;
+}
+.custom-option.selected .opt-dot { opacity: 1; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.btn-cancel-modal {
+  flex: 1;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.btn-cancel-modal:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.btn-confirm-modal {
+  flex: 2;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-confirm-modal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15,155,142,0.35);
+}
+
+/* ── ERROR MESSAGE WRAPPER (STABIL) ── */
+#login-error-wrap {
+  position: relative;
+  min-height: 48px;
+  margin-bottom: 4px;
+}
+
+#login-error {
+  display: none;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px;
+  background: var(--danger-bg);
+  border-radius: 8px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  width: 100%;
+}
+
+/* ── TOAST ── */
+#toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2b2620;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  font-family: 'Inter', sans-serif;
+}
+#toast.show { opacity: 1; }
+
+/* ── DEVICE LOCK BADGE ── */
+.module-card { position: relative; }
+.device-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: rgba(43,38,32,0.07);
+  color: var(--text-muted);
+  z-index: 2;
+  letter-spacing: 0.2px;
+}
+.module-card.device-locked {
+  filter: grayscale(0.55);
+  opacity: 0.55;
+}
+.module-card.device-locked .device-badge {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.module-card.device-ok .device-badge {
+  background: rgba(10,157,92,0.10);
+  color: var(--success);
+}
+
+/* ── RESPONSIVE (HP) ── */
+@media (max-width: 600px) {
+  .header { padding: clamp(14px, 5vh, 40px) 20px 0; }
+  .app-name { font-size: clamp(20px, 4.5vh, 28px); }
+  .tagline { font-size: clamp(11px, 2vh, 14px); }
+  .logo-icon { width: clamp(36px, 6vh, 50px); height: clamp(36px, 6vh, 50px); border-radius: 15px; }
+  .grid-wrap { padding: clamp(10px, 2vh, 18px) 14px clamp(10px, 2vh, 22px); align-items: stretch; }
+  .module-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: clamp(8px, 2vh, 14px);
+    width: 100%;
+    max-width: none;
+    max-height: 100%;
+  }
+  .module-card { padding: clamp(10px, 2.5vh, 18px) 14px clamp(8px, 2vh, 16px); gap: clamp(4px, 1vh, 8px); }
+  .card-icon-wrap { width: clamp(40px, 13vw, 72px); height: clamp(40px, 13vw, 72px); border-radius: 20px 20px 20px 7px; }
+  .module-card:hover .card-icon-wrap { border-radius: 16px; }
+  .card-icon-wrap svg { width: clamp(20px, 6.5vw, 34px); height: clamp(20px, 6.5vw, 34px); }
+  .card-title { font-size: clamp(15px, 4.5vw, 22px); }
+  .card-sub { font-size: clamp(9px, 1.6vh, 10.5px); }
+  .card-watermark { width: 130px; height: 130px; }
+  .card-go { width: 24px; height: 24px; bottom: 10px; right: 10px; }
+  .card-go svg { width: 12px; height: 12px; }
+}
+
+@media (max-width: 380px), (max-height: 600px) {
+  .module-grid { gap: 8px; }
+  .module-card { padding: clamp(8px, 2vh, 14px) 10px clamp(6px, 1.5vh, 12px); gap: 4px; }
+  .card-icon-wrap { width: clamp(36px, 12vw, 54px); height: clamp(36px, 12vw, 54px); border-radius: 16px 16px 16px 6px; }
+  .card-icon-wrap svg { width: clamp(18px, 6vw, 26px); height: clamp(18px, 6vw, 26px); }
+  .card-title { font-size: clamp(13px, 4vw, 17px); }
+  .card-sub { display: none; }
+  .card-watermark { width: 100px; height: 100px; }
+  .card-go { display: none; }
+}
+</style>
+<script>
+// ============ FIX TINGGI VIEWPORT DINAMIS (ANTI TERPOTONG SAAT BACK) ============
+// 100dvh tidak selalu dihitung ulang oleh browser HP (terutama saat halaman
+// dipulihkan dari cache navigasi / bfcache setelah tombol "back" ditekan).
+// Solusinya: hitung tinggi viewport asli via JS dan simpan sebagai CSS variable,
+// lalu hitung ulang di setiap event yang relevan.
+(function () {
+  function setAppHeight() {
+    var h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', h + 'px');
+  }
+  window.__setAppHeight = setAppHeight;
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', function () { setTimeout(setAppHeight, 60); });
+  window.addEventListener('pageshow', function () { setTimeout(setAppHeight, 60); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') setTimeout(setAppHeight, 60);
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setAppHeight);
+  }
+})();
+</script>
+</head>
+<body>
+
+<!-- WATERMARK BACKGROUND -->
+<div class="page-watermarks" aria-hidden="true">
+  <svg class="wm-1" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="38" stroke-width="6"/>
+    <path d="M30 50H70M50 30V70" stroke-width="6" stroke-linecap="round"/>
+  </svg>
+  <svg class="wm-2" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 75L35 50L50 62L75 28" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M60 28H75V43" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <svg class="wm-3" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="28" rx="28" ry="11" stroke-width="6"/>
+    <path d="M22 28V72C22 78.07 34.7 83 50 83C65.3 83 78 78.07 78 72V28" stroke-width="6"/>
+    <path d="M22 50C22 56.07 34.7 61 50 61C65.3 61 78 56.07 78 50" stroke-width="6"/>
+  </svg>
+  <svg class="wm-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="15" y="30" width="70" height="48" rx="8" stroke-width="6"/>
+    <path d="M15 46H85" stroke-width="6"/>
+    <circle cx="30" cy="62" r="5" fill="#0f9b8e" stroke="none"/>
+  </svg>
+  <svg class="wm-5" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="38" stroke-width="6"/>
+    <path d="M30 50H70M50 30V70" stroke-width="6" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 18C5 13 9 8 15 8C21 8 25 13 25 18C25 20 23.5 21.5 22 21.5H8C6.5 21.5 5 20 5 18Z" fill="white" fill-opacity="0.9"/>
+        <path d="M10 21.5V24H20V21.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <ellipse cx="15" cy="8.5" rx="4" ry="2" fill="white" fill-opacity="0.5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="app-name">SRI <span>REJEKI</span></div>
+      <div class="tagline">Sistem Manajemen Toko</div>
+    </div>
+  </div>
+</div>
+
+<!-- GRID MODUL -->
+<div class="grid-wrap">
+  <div class="module-grid">
+
+    <!-- KASIR -->
+    <a href="kasir.html" class="module-card card-kasir" id="link-kasir" data-device="pc">
+      <span class="device-badge">💻 PC</span>
+      <svg class="card-watermark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="38" stroke="#0f9b8e" stroke-width="6"/>
+        <path d="M30 50H70M50 30V70" stroke="#0f9b8e" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+      <div class="card-icon-wrap icon-kasir">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="7" width="22" height="15" rx="3" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.8"/>
+          <path d="M3 12H25" stroke="white" stroke-width="1.8"/>
+          <rect x="7" y="16" width="4" height="2.5" rx="1" fill="white"/>
+          <rect x="12" y="16" width="4" height="2.5" rx="1" fill="white"/>
+          <rect x="17" y="16" width="4" height="2.5" rx="1" fill="white"/>
+        </svg>
+      </div>
+      <div class="card-text">
+        <div class="card-title">Kasir</div>
+        <div class="card-sub">Transaksi & Penjualan</div>
+      </div>
+      <span class="card-go">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+
+    <!-- OWNER -->
+    <a href="owner.html" class="module-card card-owner" data-device="hp">
+      <span class="device-badge">📱 HP</span>
+      <svg class="card-watermark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 75L35 50L50 62L75 28" stroke="#0f9b8e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M60 28H75V43" stroke="#0f9b8e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="card-icon-wrap icon-owner">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 20L8.5 13L12.5 17L17 10L24 20H4Z" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+          <circle cx="21" cy="8" r="3" fill="white" fill-opacity="0.5" stroke="white" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="card-text">
+        <div class="card-title">Owner</div>
+        <div class="card-sub">Laporan & Monitoring</div>
+      </div>
+      <span class="card-go">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+
+    <!-- MASTER DATA -->
+    <a href="master.html" class="module-card card-master" data-device="pc">
+      <span class="device-badge">💻 PC</span>
+      <svg class="card-watermark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="50" cy="28" rx="28" ry="11" stroke="#0f9b8e" stroke-width="6"/>
+        <path d="M22 28V72C22 78.07 34.7 83 50 83C65.3 83 78 78.07 78 72V28" stroke="#0f9b8e" stroke-width="6"/>
+        <path d="M22 50C22 56.07 34.7 61 50 61C65.3 61 78 56.07 78 50" stroke="#0f9b8e" stroke-width="6"/>
+      </svg>
+      <div class="card-icon-wrap icon-master">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="5" width="20" height="5" rx="2" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.8"/>
+          <rect x="4" y="12" width="20" height="5" rx="2" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.8"/>
+          <rect x="4" y="19" width="20" height="4" rx="2" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.8"/>
+          <circle cx="8" cy="7.5" r="1.2" fill="white"/>
+          <circle cx="8" cy="14.5" r="1.2" fill="white"/>
+          <circle cx="8" cy="21" r="1.2" fill="white"/>
+        </svg>
+      </div>
+      <div class="card-text">
+        <div class="card-title">Master Data</div>
+        <div class="card-sub">Kelola Data Master</div>
+      </div>
+      <span class="card-go">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+
+    <!-- PAYROLL -->
+    <a href="payroll.html" class="module-card card-payroll" data-device="hp">
+      <span class="device-badge">📱 HP</span>
+      <svg class="card-watermark" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="15" y="30" width="70" height="48" rx="8" stroke="#0f9b8e" stroke-width="6"/>
+        <path d="M15 46H85" stroke="#0f9b8e" stroke-width="6"/>
+        <circle cx="30" cy="62" r="5" fill="#0f9b8e"/>
+      </svg>
+      <div class="card-icon-wrap icon-payroll">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="10" r="5" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.8"/>
+          <path d="M5 23C5 19.134 9.03 16 14 16C18.97 16 23 19.134 23 23" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M17 10H19M19 10H21M19 10V8M19 10V12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="card-text">
+        <div class="card-title">Payroll</div>
+        <div class="card-sub">Gaji & Karyawan</div>
+      </div>
+      <span class="card-go">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  em2studio &copy; <span id="year"></span> &nbsp;·&nbsp; v1.0
+</div>
+
+<!-- MODAL LOGIN KASIR -->
+<div class="modal-overlay" id="modal-login">
+  <div class="modal">
+    <h3>🔑 Masuk ke Kasir</h3>
+    <div class="modal-sub">Pilih cabang dan masukkan password</div>
+
+    <div class="form-group">
+      <label>Pilih Cabang</label>
+      <div class="custom-select-wrap" id="cabang-wrap">
+        <button type="button" class="custom-select-btn" id="cabang-btn" onclick="toggleCabangDropdown()" aria-haspopup="listbox" aria-expanded="false">
+          <span id="cabang-label">Pilih Cabang</span>
+          <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="custom-select-dropdown" id="cabang-dropdown" role="listbox"></div>
+      </div>
+      <input type="hidden" id="login-cabang">
+    </div>
+
+    <div class="form-group">
+      <label>Password / Kode Akses</label>
+      <input type="password" id="login-password" placeholder="Masukkan password cabang" maxlength="20">
+    </div>
+
+    <!-- ERROR WRAPPER (stabil, tidak mengubah ukuran modal) -->
+    <div id="login-error-wrap">
+      <div id="login-error">⚠️ Password salah. Silakan coba lagi.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel-modal" onclick="closeLoginModal()">Batal</button>
+      <button class="btn-confirm-modal" onclick="loginKasir()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 13l4.5 4.5L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Masuk
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+document.getElementById('year').textContent = new Date().getFullYear();
+
+var sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+
+// ============ DEVICE DETECTION ============
+var CURRENT_UA = navigator.userAgent || '';
+var IS_MOBILE_DEVICE = /Mobi|Android|iPhone|iPad|iPod|Tablet|BlackBerry|IEMobile|Opera Mini|Windows Phone/i.test(CURRENT_UA) || window.innerWidth <= 480;
+
+function applyDeviceLocks() {
+  document.querySelectorAll('.module-card[data-device]').forEach(function (card) {
+    var need = card.getAttribute('data-device'); // 'pc' atau 'hp'
+    var ok = (need === 'pc' && !IS_MOBILE_DEVICE) || (need === 'hp' && IS_MOBILE_DEVICE);
+    card.classList.toggle('device-locked', !ok);
+    card.classList.toggle('device-ok', ok);
+  });
+}
+applyDeviceLocks();
+
+var _pendingForceHref = null;
+var _pendingForceTimer = null;
+
+// ============ PAGE TRANSITION ============
+var FADE_OUT_MS = 320;
+
+document.querySelectorAll('a.module-card').forEach(function (link) {
+  link.addEventListener('click', function (e) {
+    var href = link.getAttribute('href');
+    if (!href || link.target === '_blank' || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      return;
+    }
+
+    e.preventDefault();
+
+    // ── CEK DEVICE LOCK ──
+    if (link.classList.contains('device-locked')) {
+      var need = link.getAttribute('data-device');
+      var labelDev = need === 'pc' ? 'PC / Laptop' : 'HP / Smartphone';
+      if (_pendingForceHref === href) {
+        // tap kedua dalam 3 detik -> buka paksa
+        clearTimeout(_pendingForceTimer);
+        _pendingForceHref = null;
+        document.body.classList.add('fade-out');
+        setTimeout(function () {
+          window.location.href = href + (href.indexOf('?') > -1 ? '&' : '?') + 'force=1';
+        }, FADE_OUT_MS);
+        return;
+      }
+      showToast('Modul ini khusus untuk ' + labelDev + '. Tap sekali lagi untuk tetap membuka.');
+      _pendingForceHref = href;
+      clearTimeout(_pendingForceTimer);
+      _pendingForceTimer = setTimeout(function () { _pendingForceHref = null; }, 3000);
+      return;
+    }
+
+    if (href === 'kasir.html') {
+      openLoginModal();
+      return;
+    }
+
+    document.body.classList.add('fade-out');
+    setTimeout(function () {
+      window.location.href = href;
+    }, FADE_OUT_MS);
+  });
+});
+
+// ============ TOAST ============
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'show';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(function () {
+    t.className = '';
+  }, 3200);
+}
+
+// ============ LOGIN KASIR ============
+async function openLoginModal() {
+  var modal = document.getElementById('modal-login');
+  modal.classList.add('open');
+
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').style.display = 'none';
+
+  setTimeout(function () {
+    document.getElementById('login-password').focus();
+  }, 100);
+
+  var dropdown = document.getElementById('cabang-dropdown');
+  dropdown.innerHTML = '<div class="custom-option placeholder"><span class="opt-dot"></span>Memuat cabang...</div>';
+  selectCabang('', 'Pilih Cabang', true);
+
+  function renderCabangOptions(data) {
+    dropdown.innerHTML = '';
+    var sorted = (data || []).slice().sort(function (a, b) {
+      var aPusat = (a.nama || '').toUpperCase().trim() === 'TOKO PUSAT';
+      var bPusat = (b.nama || '').toUpperCase().trim() === 'TOKO PUSAT';
+      if (aPusat && !bPusat) return -1;
+      if (!aPusat && bPusat) return 1;
+      return (a.nama || '').localeCompare(b.nama || '', 'id');
+    });
+    sorted.forEach(function (c) {
+      var opt = document.createElement('div');
+      opt.className = 'custom-option';
+      opt.dataset.value = c.id;
+      opt.innerHTML = '<span class="opt-dot"></span>' + c.nama;
+      opt.addEventListener('click', function () {
+        selectCabang(c.id, c.nama);
+      });
+      dropdown.appendChild(opt);
+    });
+  }
+
+  // Coba load dari Supabase, fallback ke cache localStorage saat offline
+  try {
+    var { data, error } = await sb.from('cabang').select('id, nama').order('nama');
+    if (error) throw error;
+    // Simpan ke localStorage sebagai cache offline
+    localStorage.setItem('cabang_cache', JSON.stringify(data));
+    renderCabangOptions(data);
+  } catch (e) {
+    // Offline atau error — coba ambil dari cache
+    var cached = localStorage.getItem('cabang_cache');
+    if (cached) {
+      var cachedData = JSON.parse(cached);
+      renderCabangOptions(cachedData);
+      // Tampilkan info kecil bahwa ini data cache
+      var info = document.createElement('div');
+      info.className = 'custom-option placeholder';
+      info.style.cssText = 'color:#f59e0b;font-size:11px;border-top:1px solid #eee;';
+      info.innerHTML = '<span class="opt-dot" style="background:#f59e0b"></span>Mode offline — data terakhir';
+      dropdown.appendChild(info);
+    } else {
+      dropdown.innerHTML = '<div class="custom-option placeholder" style="color:var(--danger)"><span class="opt-dot"></span>Tidak ada koneksi & belum ada cache</div>';
+    }
+    console.warn('Load cabang offline, pakai cache:', e);
+  }
+}
+
+function toggleCabangDropdown() {
+  var btn = document.getElementById('cabang-btn');
+  var dd = document.getElementById('cabang-dropdown');
+  var isOpen = dd.classList.contains('open');
+
+  if (isOpen) {
+    dd.classList.remove('open');
+    btn.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+  } else {
+    dd.classList.add('open');
+    btn.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function selectCabang(value, label, isPlaceholder) {
+  isPlaceholder = isPlaceholder || false;
+  document.getElementById('login-cabang').value = value;
+
+  var lbl = document.getElementById('cabang-label');
+  lbl.textContent = label;
+
+  var btn = document.getElementById('cabang-btn');
+  if (isPlaceholder) {
+    btn.classList.remove('has-value');
+  } else {
+    btn.classList.add('has-value');
+  }
+
+  var options = document.querySelectorAll('#cabang-dropdown .custom-option');
+  for (var i = 0; i < options.length; i++) {
+    var opt = options[i];
+    if (!isPlaceholder && opt.dataset.value === value) {
+      opt.classList.add('selected');
+    } else {
+      opt.classList.remove('selected');
+    }
+  }
+
+  document.getElementById('cabang-dropdown').classList.remove('open');
+  btn.classList.remove('open');
+  btn.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', function (e) {
+  var wrap = document.getElementById('cabang-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('cabang-dropdown').classList.remove('open');
+    document.getElementById('cabang-btn').classList.remove('open');
+  }
+});
+
+document.getElementById('modal-login').addEventListener('click', function (e) {
+  if (e.target === this) {
+    closeLoginModal();
+  }
+});
+
+function closeLoginModal() {
+  document.getElementById('modal-login').classList.remove('open');
+  document.body.classList.remove('fade-out');
+}
+
+async function loginKasir() {
+  var cabangId = document.getElementById('login-cabang').value;
+  var password = document.getElementById('login-password').value.trim().toUpperCase();
+
+  if (!cabangId) {
+    showToast('Pilih cabang terlebih dahulu');
+    return;
+  }
+
+  if (!password) {
+    showToast('Masukkan password');
+    return;
+  }
+
+  var data = null;
+
+  if (navigator.onLine) {
+    // Online: verifikasi ke Supabase
+    var { data: d, error } = await sb
+      .from('cabang')
+      .select('id, nama')
+      .eq('id', cabangId)
+      .eq('password', password)
+      .single();
+
+    if (error || !d) {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('login-password').value = '';
+      document.getElementById('login-password').focus();
+      return;
+    }
+    // Simpan password hash ke cache untuk login offline
+    var pwCache = JSON.parse(localStorage.getItem('cabang_pw_cache') || '{}');
+    pwCache[cabangId] = password;
+    localStorage.setItem('cabang_pw_cache', JSON.stringify(pwCache));
+    data = d;
+  } else {
+    // Offline: verifikasi dari cache
+    var pwCache = JSON.parse(localStorage.getItem('cabang_pw_cache') || '{}');
+    var cachedPw = pwCache[cabangId];
+    if (!cachedPw || cachedPw !== password) {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('login-error').textContent = 'Password salah atau belum pernah login online di cabang ini';
+      document.getElementById('login-password').value = '';
+      document.getElementById('login-password').focus();
+      return;
+    }
+    // Ambil nama cabang dari cache
+    var cabangCache = JSON.parse(localStorage.getItem('cabang_cache') || '[]');
+    var cabang = cabangCache.find(function(c) { return c.id == cabangId; });
+    data = { id: cabangId, nama: cabang ? cabang.nama : 'Cabang #' + cabangId };
+  }
+
+  closeLoginModal();
+  document.body.classList.add('fade-out');
+
+  setTimeout(function () {
+    window.location.href = 'kasir.html?cabang=' + data.id + '&nama=' + encodeURIComponent(data.nama);
+  }, FADE_OUT_MS);
+}
+
+
+document.getElementById('login-password').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') loginKasir();
+  if (e.key === 'Escape') closeLoginModal();
+});
+
+// ============ RESET FADE-OUT ============
+document.addEventListener('DOMContentLoaded', function () {
+  document.body.classList.remove('fade-out');
+});
+
+// ============ RESET ZOOM/SCROLL SAAT BACK NAVIGATION ============
+// Mengatasi bug WebView/Safari: posisi zoom dari halaman sebelumnya
+// (misal akibat fokus ke input password) kadang terbawa balik saat
+// tombol "back" ditekan, sehingga layout tampak membesar & bisa discroll.
+function resetViewportState() {
+  document.body.classList.remove('fade-out');
+  window.scrollTo(0, 0);
+
+  // Hitung ulang tinggi viewport asli (memperbaiki bug terpotong di bawah
+  // saat halaman dipulihkan dari cache navigasi / tombol back)
+  if (window.__setAppHeight) window.__setAppHeight();
+
+  // Paksa browser hitung ulang scale viewport dengan re-apply meta tag
+  var vp = document.querySelector('meta[name="viewport"]');
+  if (vp) {
+    var content = vp.getAttribute('content');
+    vp.setAttribute('content', content + ', shrink-to-fit=no');
+    requestAnimationFrame(function () {
+      vp.setAttribute('content', content);
+      if (window.__setAppHeight) window.__setAppHeight();
+    });
+  }
+}
+
+window.addEventListener('pageshow', function (e) {
+  resetViewportState();
+});
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') {
+    resetViewportState();
+  }
+});
+
+</script>
+
+<!-- ── SERVICE WORKER REGISTRATION (offline support) ── -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Deteksi base path otomatis — aman untuk GitHub Pages subfolder
+    const swUrl = new URL('sw.js', document.baseURI).href;
+    const scope = new URL('./', document.baseURI).href;
+    navigator.serviceWorker.register(swUrl, { scope })
+      .then(reg => console.log('[SW] Terdaftar:', reg.scope))
+      .catch(err => console.warn('[SW] Gagal daftar:', err));
+  });
+}
+</script>
+</body>
+</html>
