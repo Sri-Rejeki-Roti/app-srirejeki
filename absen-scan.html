@@ -6,12 +6,9 @@
   <title>Absen QR</title>
   
   <!-- ========================================================== -->
-  <!-- KONFIGURASI SUPABASE (langsung di file ini, tidak pakai config.js) -->
+  <!-- CONFIG.JS (PASTIKAN ADA)                                   -->
   <!-- ========================================================== -->
-  <script>
-    window.SUPABASE_URL = 'https://xtqzopwoklvzbxdjuuif.supabase.co';
-    window.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0cXpvcHdva2x2emJ4ZGp1dWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODc3NzMsImV4cCI6MjA5ODY2Mzc3M30.dq9rzhnzMystHmJufkuCKcFS8rhIN9HxHiALIxZwR3Y';
-  </script>
+  <script src="config.js"></script>
   <!-- FIX: library Supabase-nya kemarin tidak ter-load, makanya absen-scan
        selalu pakai jam default (07:00-09:00) dan gagal load Supabase. -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -353,7 +350,7 @@
 // ============================================================
 // CEK APAKAH CONFIG.JS TERBACA
 // ============================================================
-console.log('🔍 Checking Supabase credentials...');
+console.log('🔍 Checking config.js...');
 console.log('SUPABASE_URL:', window.SUPABASE_URL);
 console.log('SUPABASE_KEY:', window.SUPABASE_KEY);
 
@@ -376,7 +373,7 @@ if (window.SUPABASE_URL && window.SUPABASE_KEY) {
     console.error('❌ Supabase init error:', e);
   }
 } else {
-  console.warn('⚠️ Kredensial Supabase tidak ditemukan!');
+  console.warn('⚠️ config.js not loaded properly!');
   // TAMPILKAN PESAN DI HALAMAN
   document.getElementById('jam-status').textContent = '⚠️ Config tidak terbaca';
 }
