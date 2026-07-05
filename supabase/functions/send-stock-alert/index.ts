@@ -1,11 +1,8 @@
 // File: supabase/functions/send-stock-alert/index.ts
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// PENTING: "webpush_deno" di deno.land/x tidak ditemukan sebagai modul nyata —
-// pakai npm:web-push, yang didukung resmi oleh Supabase Edge Runtime dan
-// API-nya (sendNotification, vapidDetails) sama seperti yang sudah dipakai di bawah.
-import webpush from "npm:web-push@3.6.7";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "npm:web-push@3.6.7"; // Menggunakan modul NPM yang stabil
 
 // Ambil secrets dari Supabase Dashboard
 // -> Edge Functions -> send-stock-alert -> Secrets
@@ -13,12 +10,6 @@ const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-webpush.setVapidDetails(
-  "mailto:admin@srirejeki.app",
-  VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY,
-);
 
 // Ambang batas default kalau produk tidak punya stok_minimum sendiri
 const DEFAULT_LOW_STOCK_THRESHOLD = 5;
@@ -32,11 +23,20 @@ function isStokMenipis(stok: number, stokMinimum: number | null, cepatKadaluarsa
   return stok <= ambang;
 }
 
+/**
+ * Hapus subscription yang sudah tidak valid (404/410) dari database.
+ */
+async function cleanupSubscription(endpoint: string, supabaseAdmin: SupabaseClient) {
+  await supabaseAdmin.from("push_subscriptions").delete().eq("endpoint", endpoint);
+  console.log(`Subscription kadaluarsa, dihapus: ${endpoint.slice(0, 40)}...`);
+}
+
 serve(async (_req) => {
   try {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Ambil SEMUA baris stok_cabang beserta info produk (stok_minimum,
+    // 1. Ambil SEMUA baris stok_cabang dari produk yang AKTIF beserta info
+    //    produk terkait (stok_minimum, cepat_kadaluarsa).
     //    cepat_kadaluarsa) — filter "menipis/habis"-nya dilakukan di JS
     //    karena ambangnya beda-beda per produk, tidak bisa difilter lewat .lte() saja.
     const { data: allStok, error: stockError } = await supabaseAdmin
@@ -44,8 +44,9 @@ serve(async (_req) => {
       .select(`
         stok,
         produk ( id, nama, stok_minimum, cepat_kadaluarsa ),
-        cabang ( nama )
+        cabang ( id, nama )
       `);
+      .eq('produk.aktif', true); // Hanya cek produk yang aktif dijual
 
     if (stockError) throw stockError;
 
@@ -65,7 +66,7 @@ serve(async (_req) => {
     // 2. Ambil semua subscriber notifikasi dari tabel push_subscriptions
     const { data: subscriptions, error: subsError } = await supabaseAdmin
       .from("push_subscriptions")
-      .select("endpoint, p256dh, auth");
+      .select("endpoint, subscription"); // Ambil seluruh object JSONB
 
     if (subsError) throw subsError;
     if (!subscriptions || subscriptions.length === 0) {
@@ -94,18 +95,22 @@ serve(async (_req) => {
     // 4. Kirim notifikasi ke semua subscriber, buang subscription yang sudah
     //    tidak valid lagi (404/410) supaya tabel push_subscriptions tetap bersih.
     const pushPromises = subscriptions.map(async (sub) => {
-      const pushSubscription = {
-        endpoint: sub.endpoint,
-        keys: { p256dh: sub.p256dh, auth: sub.auth },
-      };
+      // Pastikan subscription adalah objek yang valid
+      if (!sub.subscription || typeof sub.subscription !== 'object' || !sub.subscription.endpoint) {
+        return;
+      }
       try {
-        await webpush.sendNotification(pushSubscription, payload);
+        await webpush.sendNotification(sub.subscription, payload, {
+          vapidDetails: {
+            subject: "mailto:admin@srirejeki.app",
+            publicKey: VAPID_PUBLIC_KEY,
+            privateKey: VAPID_PRIVATE_KEY,
+          },
+        });
       } catch (err: any) {
         const statusCode = err?.statusCode;
         if (statusCode === 404 || statusCode === 410) {
-          // Subscription kadaluarsa/dicabut browser -> hapus dari database
-          await supabaseAdmin.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-          console.log(`Subscription kadaluarsa, dihapus: ${sub.endpoint.slice(0, 40)}...`);
+          await cleanupSubscription(sub.endpoint, supabaseAdmin);
         } else {
           console.error(`Gagal kirim ke ${sub.endpoint.slice(0, 40)}...`, err?.body || err);
         }
