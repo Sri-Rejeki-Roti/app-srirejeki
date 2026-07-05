@@ -1313,6 +1313,36 @@ document.addEventListener('visibilitychange', function () {
     });
   }
 
+  // ── Cek versi lewat version.json (INDEPENDEN dari siklus SW) ──
+  // Ini pengaman ekstra untuk kasus PWA ter-install yang cuma "resume"
+  // dari background (tidak reload sungguhan) saat dibuka lagi — pada
+  // kasus itu event SW (updatefound/controllerchange) tidak sempat
+  // jalan karena halaman memang tidak pernah reload. Fetch biasa di
+  // bawah ini tetap jalan walau halaman cuma di-resume, sehingga versi
+  // baru tetap terdeteksi.
+  let knownVersion = null;
+  async function fetchVersion() {
+    try {
+      const res = await fetch(new URL('version.json', document.baseURI).href, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.version || null;
+    } catch (e) { return null; } // offline / gagal fetch → abaikan
+  }
+  async function checkVersionMismatch() {
+    const v = await fetchVersion();
+    if (knownVersion === null) { knownVersion = v; return; }
+    if (v && v !== knownVersion) {
+      showUpdatePopup(() => window.location.reload());
+    }
+  }
+  fetchVersion().then(v => { knownVersion = v; });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkVersionMismatch();
+  });
+  // Jaga-jaga tambahan kalau app dibiarkan terbuka lama di foreground
+  setInterval(checkVersionMismatch, 5 * 60 * 1000);
+
   navigator.serviceWorker.register(swUrl, { scope: scope, updateViaCache: 'none' })
     .then(reg => {
       console.log('[SW] Terdaftar:', reg.scope);
