@@ -3,9 +3,13 @@
  * https://sri-rejeki-roti.github.io/srirejeki/
  * v6 — fix layout/zoom index.html (viewport lock + form font-size 16px)
  * v7 — tambah push notification (stok menipis/habis)
+ * v8 — bump cache: kasir.html (gate password + fix sync/keyboard/HPP),
+ *      payroll.html (unifikasi topbar/radius), index.html (session flag
+ *      login kasir) berubah; tambah absen-scan.html & qr-generator.html
+ *      ke pre-cache.
  */
 
-const CACHE_NAME = 'sri-rejeki-v1.0.0';
+const CACHE_NAME = 'sri-rejeki-v1.1.0';
 const SUPABASE_ORIGIN = 'supabase.co';
 const CDN_ORIGINS = ['cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -18,6 +22,8 @@ self.addEventListener('install', event => {
     base + 'master.html',
     base + 'owner.html',
     base + 'payroll.html',
+    base + 'absen-scan.html',
+    base + 'qr-generator.html',
     base + 'manifest.json',
     base + 'icon-192.png',
     base + 'icon-512.png',
