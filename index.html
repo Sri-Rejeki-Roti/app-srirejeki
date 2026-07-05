@@ -786,7 +786,7 @@ body.fade-out {
 
 <!-- FOOTER -->
 <div class="footer">
-  em2studio &copy; <span id="year"></span> &nbsp;·&nbsp; v1.1
+  em2studio &copy; <span id="year"></span> &nbsp;·&nbsp; v1.2
 </div>
 
 <!-- MODAL LOGIN KASIR -->
@@ -1291,6 +1291,18 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(swUrl, { scope })
       .then(reg => console.log('[SW] Terdaftar:', reg.scope))
       .catch(err => console.warn('[SW] Gagal daftar:', err));
+  });
+
+  // Listener untuk pesan dari Service Worker
+  navigator.serviceWorker.addEventListener('message', event => {
+    // Cek apakah pesan adalah notifikasi update
+    if (event.data && event.data.type === 'SW_UPDATED') {
+      console.log('[App] Service Worker baru sudah aktif. Menampilkan notifikasi update.');
+      const updateBanner = document.getElementById('update-banner');
+      if (updateBanner) {
+        updateBanner.style.display = 'flex';
+      }
+    }
   });
 }
 </script>
