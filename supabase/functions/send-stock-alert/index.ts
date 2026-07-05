@@ -1,8 +1,8 @@
 // File: supabase/functions/send-stock-alert/index.ts
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.4";
-import * as webpush from "https://deno.land/x/web_push@0.1.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as webpush from "https://deno.land/x/webpush_deno@1.1.0/mod.ts";
 
 // Ambil secrets dari Supabase Dashboard
 // -> Edge Functions -> send-stock-alert -> Secrets
