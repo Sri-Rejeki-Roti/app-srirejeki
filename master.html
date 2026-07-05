@@ -68,19 +68,6 @@ svg.icon { display:block; flex-shrink:0; }
 .topbar h1 { font-size:19px; font-weight:700; letter-spacing:-0.2px; }
 .topbar .tagline { font-size:11px; opacity:0.75; font-weight:500; margin-top:-2px; }
 .topbar .spacer { flex:1; }
-.topbar-back {
-  display:flex; align-items:center; gap:5px; padding:7px 12px;
-  border-radius:9px; background:rgba(255,255,255,0.18);
-  font-size:12px; font-weight:600; text-decoration:none; color:white;
-  border:none; cursor:pointer; font-family:inherit;
-}
-.topbar-back:hover { background:rgba(255,255,255,0.28); }
-.topbar-back.master-only {
-  background: rgba(45,212,191,0.25);
-  border: 1px solid rgba(45,212,191,0.35);
-}
-.topbar-back.master-only:hover { background: rgba(45,212,191,0.4); }
-
 /* ── HAMBURGER (buka sidebar tabs) ── */
 .hamburger-btn {
   display:flex; align-items:center; justify-content:center;
@@ -114,6 +101,12 @@ svg.icon { display:block; flex-shrink:0; }
   display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted);
 }
 .sidebar-close-btn:hover { background:var(--border); }
+.sidebar-exit-btn {
+  display:flex; align-items:center; gap:10px; padding:12px 12px; margin-top:10px;
+  font-size:14px; font-weight:700; border:none; border-top:1.5px solid var(--border);
+  background:none; cursor:pointer; color:var(--danger); border-radius:0; width:100%; text-align:left;
+}
+.sidebar-exit-btn:hover { background:var(--danger-bg); }
 .tab-btn {
   display:flex; align-items:center; gap:10px; padding:12px 12px;
   font-size:14px; font-weight:600; border:none; background:none; cursor:pointer;
@@ -1220,10 +1213,6 @@ svg.icon { display:block; flex-shrink:0; }
     </div>
   </div>
   <div class="spacer"></div>
-  <button type="button" class="topbar-back" onclick="goBackTab()">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Back
-  </button>
 </div>
 
 <!-- SIDEBAR OVERLAY -->
@@ -1247,9 +1236,6 @@ svg.icon { display:block; flex-shrink:0; }
       <div class="tab-subitems-inner">
         <button class="tab-subitem active" onclick="switchTab('produk',this)" id="tab-produk-btn">
           Produk Master <span class="tab-count" id="count-produk">0</span>
-        </button>
-        <button class="tab-subitem" onclick="switchTab('stok',this)" id="tab-stok-btn">
-          Produk Stok <span class="tab-count" id="count-stok">0</span>
         </button>
         <button class="tab-subitem" onclick="switchTab('restok',this)" id="tab-restok-btn">
         </span> Produk Restok <span class="tab-count" id="count-restok">0</span>
@@ -1325,12 +1311,21 @@ svg.icon { display:block; flex-shrink:0; }
       </div>
     </div>
   </div>
+  <button class="sidebar-exit-btn" type="button" onclick="window.location.href='index.html'">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+    Keluar
+  </button>
 </div>
 
 <!-- MAIN DEFAULT -->
 <div class="main-content" id="main-default">
   <!-- TAB PRODUK -->
   <div class="tab-section active" id="sec-produk">
+    <div class="subtabs-nav">
+      <button class="subtab-btn active" type="button" onclick="switchProdukSubtab('master',this)" id="produk-subtab-master-btn">Produk Master</button>
+      <button class="subtab-btn" type="button" onclick="switchProdukSubtab('stok',this)" id="produk-subtab-stok-btn">Produk Stok <span class="subtab-count" id="count-stok">0</span></button>
+    </div>
+    <div class="produk-subpanel" id="produk-panel-master">
     <div class="stats-row" id="produk-stats"></div>
     <div class="rkj-warning" id="produk-notif-banner" style="display:none"></div>
     <div class="sec-header">
@@ -1364,6 +1359,42 @@ svg.icon { display:block; flex-shrink:0; }
         <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok</th><th style="width:130px">Status</th><th style="text-align:center;width:120px">Aksi</th></tr></thead>
         <tbody id="tbl-produk"><tr class="empty-row"><td colspan="6">Memuat...</td></tr></tbody>
       </table>
+    </div>
+    </div>
+    <div class="produk-subpanel" id="produk-panel-stok" style="display:none">
+    <div class="cabang-selector-bar">
+      <label>📍 Pilih Cabang</label>
+      <div class="custom-select-wrap" id="stok-cabang-wrap" style="min-width:220px">
+        <button type="button" class="custom-select-btn has-placeholder" id="stok-cabang-btn" onclick="toggleCabangDropdown('stok')">
+          <span id="stok-cabang-label">— Pilih Cabang —</span>
+          <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="custom-select-dropdown" id="stok-cabang-dropdown" role="listbox"></div>
+      </div>
+      <input type="hidden" id="stok-cabang-value">
+      <div id="stok-cabang-badge"></div>
+      <div style="flex:1"></div>
+      <div id="stok-summary-cards" class="stok-summary-bar"></div>
+    </div>
+    <div class="sec-header">
+      <div class="sec-title"><span id="sh-icon-stok"></span>PRODUK STOK <small id="stok-total-label"></small></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="custom-select-wrap" id="stok-filter-status-wrap">
+          <button type="button" class="custom-select-btn has-placeholder" id="stok-filter-status-btn" onclick="toggleGenericDropdown('stok-filter-status')">
+            <span id="stok-filter-status-label">Semua Status Stok</span>
+            <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="custom-select-dropdown" id="stok-filter-status-dropdown" role="listbox"></div>
+        </div>
+        <input type="hidden" id="stok-filter-status" value="">
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok di Cabang</th><th style="width:130px">Status</th><th style="text-align:center;width:120px">Edit Stok</th></tr></thead>
+        <tbody id="tbl-stok-cabang"><tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr></tbody>
+      </table>
+    </div>
     </div>
   </div>
 
@@ -1668,45 +1699,6 @@ svg.icon { display:block; flex-shrink:0; }
     </div>
   </div>
 </div><!-- /main-default -->
-
-<!-- MAIN STOK -->
-<div class="main-content" id="main-stok" style="display:none">
-  <div class="tab-section active" id="sec-stok">
-    <div class="cabang-selector-bar">
-      <label>📍 Pilih Cabang</label>
-      <div class="custom-select-wrap" id="stok-cabang-wrap" style="min-width:220px">
-        <button type="button" class="custom-select-btn has-placeholder" id="stok-cabang-btn" onclick="toggleCabangDropdown('stok')">
-          <span id="stok-cabang-label">— Pilih Cabang —</span>
-          <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="custom-select-dropdown" id="stok-cabang-dropdown" role="listbox"></div>
-      </div>
-      <input type="hidden" id="stok-cabang-value">
-      <div id="stok-cabang-badge"></div>
-      <div style="flex:1"></div>
-      <div id="stok-summary-cards" class="stok-summary-bar"></div>
-    </div>
-    <div class="sec-header">
-      <div class="sec-title"><span id="sh-icon-stok"></span>PRODUK STOK <small id="stok-total-label"></small></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="custom-select-wrap" id="stok-filter-status-wrap">
-          <button type="button" class="custom-select-btn has-placeholder" id="stok-filter-status-btn" onclick="toggleGenericDropdown('stok-filter-status')">
-            <span id="stok-filter-status-label">Semua Status Stok</span>
-            <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="custom-select-dropdown" id="stok-filter-status-dropdown" role="listbox"></div>
-        </div>
-        <input type="hidden" id="stok-filter-status" value="">
-      </div>
-    </div>
-    <div class="tbl-wrap">
-      <table>
-        <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok di Cabang</th><th style="width:130px">Status</th><th style="text-align:center;width:120px">Edit Stok</th></tr></thead>
-        <tbody id="tbl-stok-cabang"><tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
 <!-- MAIN STOKLOG -->
 <div class="main-content" id="main-stoklog" style="display:none">
@@ -2077,11 +2069,7 @@ svg.icon { display:block; flex-shrink:0; }
           </div>
           <input type="hidden" id="fp-kategori" value="">
         </div>
-        <div class="form-grid" style="grid-template-columns:1fr 1fr">
-          <div class="form-group"><label>Ambang Stok Menipis</label><input type="number" id="fp-stok-minimum" tabindex="5" min="0" step="1" placeholder="0"></div>
-          <div class="form-group"><label>&nbsp;</label><div class="toggle-wrap" style="height:46px;align-items:center"><label class="toggle"><input type="checkbox" id="fp-cepat-kadaluarsa" tabindex="-1"><span class="toggle-slider"></span></label><span style="font-size:13px;font-weight:600;color:var(--text-muted)">⏳ Cepat Kadaluarsa</span></div></div>
-        </div>
-        <div class="form-group" id="fp-kadaluarsa-hint" style="display:none"><div style="font-size:11.5px;color:#92400e;background:#fff8e6;border:1.5px solid #f5d999;border-radius:var(--radius-sm);padding:8px 12px">💡 Produk ini tidak akan muncul di peringatan "Stok Menipis" selama stoknya masih di atas 0 — cocok untuk produk basah/segar yang memang sengaja tidak distok banyak.</div></div>
+        <div class="form-group"><label>Ambang Stok Menipis</label><input type="number" id="fp-stok-minimum" tabindex="5" min="0" step="1" placeholder="0"></div>
         <div class="form-group"><label>Status</label><div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="fp-aktif" tabindex="-1" checked><span class="toggle-slider"></span></label><span id="fp-aktif-label" style="font-size:14px;font-weight:600;color:var(--success)">Aktif</span></div></div>
         <div class="modal-actions" style="margin-top:auto"><button class="btn-cancel" tabindex="-1" onclick="closeModalProduk()">Batal</button><button class="btn-save" id="btn-save-produk" tabindex="6" onclick="saveProduk()"><span id="btn-save-produk-icon"></span>Simpan</button></div>
       </div>
@@ -2307,7 +2295,7 @@ let selectedCabangId = null;
 let selectedEmoji = 'bread';
 let selectedFotoBase64 = null;
 let activeTab = 'produk';
-let tabHistory = []; // stack tab-tab sebelumnya, dipakai oleh tombol Back di topbar
+let tabHistory = []; // stack tab-tab sebelumnya (tidak lagi dipakai untuk navigasi Back)
 
 // ============ TOPBAR JUDUL PER MENU ============
 const TAB_TITLES = {
@@ -2318,7 +2306,6 @@ const TAB_TITLES = {
   rekappel:  { title: 'Rekap Pelanggan',  tagline: 'Rekap Transaksi Pelanggan' },
   retur:     { title: 'Retur',            tagline: 'Manajemen Retur Produk' },
   restok:    { title: 'Produk Restok',           tagline: 'Manajemen Restok Produk' },
-  stok:      { title: 'Produk Stok',  tagline: 'Stok Produk per Cabang' },
   stoklog:   { title: 'Log Stok',         tagline: 'Riwayat Perubahan Stok' },
   bahan:     { title: 'Bahan Baku',       tagline: 'Manajemen Stok Bahan Baku' },
   'pengambilan-bahan': { title: 'Pengambilan Bahan', tagline: 'Riwayat Pengambilan Bahan Baku' },
@@ -2921,82 +2908,87 @@ function switchTab(name, btn, fromBack) {
   }
   closeSidebar();
   const mainDefault = document.getElementById('main-default');
-  const mainStok = document.getElementById('main-stok');
   const mainStoklog = document.getElementById('main-stoklog');
   const mainBahan = document.getElementById('main-bahan');
   const mainSetting = document.getElementById('main-setting');
-  if (name === 'stok') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'block'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
-    document.getElementById('sec-stok').classList.add('active');
-    const val = document.getElementById('stok-cabang-value').value;
-    if (val) { loadStokCabang(); }
-    else { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr>'; }
-  } else if (name === 'stoklog') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'none'; mainStoklog.style.display = 'block'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
+  if (name === 'stoklog') {
+    mainDefault.style.display = 'none'; mainStoklog.style.display = 'block'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
     document.getElementById('sec-stoklog').classList.add('active');
     loadStokLog();
   } else if (name === 'bahan') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'block'; mainSetting.style.display = 'none';
+    mainDefault.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'block'; mainSetting.style.display = 'none';
     document.querySelectorAll('#main-bahan .tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('sec-bahan').classList.add('active');
     loadBahan();
     loadPegawaiPayroll();
   } else if (name === 'pengambilan-bahan') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'block'; mainSetting.style.display = 'none';
+    mainDefault.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'block'; mainSetting.style.display = 'none';
     document.querySelectorAll('#main-bahan .tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('sec-pengambilan').classList.add('active');
     loadPegawaiPayroll(); populateBahanSelect(); loadPengambilan();
   } else if (name === 'backup') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
+    mainDefault.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
     document.querySelectorAll('#main-setting .tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('sec-backup').classList.add('active');
   } else if (name === 'reset-database') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
+    mainDefault.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
     document.querySelectorAll('#main-setting .tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('sec-reset-database').classList.add('active');
     const ki = document.getElementById('reset-konfirmasi'); if (ki) { ki.value = ''; }
     const btn = document.getElementById('btn-reset-execute'); if (btn) btn.disabled = true;
   } else if (name === 'setting-password') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
+    mainDefault.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
     document.querySelectorAll('#main-setting .tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('sec-setting-password').classList.add('active');
     loadCabang();
   } else if (name === 'setting-cabang') {
-    mainDefault.style.display = 'none'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
+    mainDefault.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'block';
     document.querySelectorAll('#main-setting .tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById('sec-cabang').classList.add('active');
     loadCabang();
   } else if (name === 'rekapjual') {
-    mainDefault.style.display = 'block'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
+    mainDefault.style.display = 'block'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
     document.getElementById('sec-rekapjual').classList.add('active');
     const rDari = document.getElementById('rekapjual-dari');
     if (rDari && !rDari.value) setRekapJualPeriode('hari');
     else loadRekapJual();
   } else if (name === 'rekappel') {
-    mainDefault.style.display = 'block'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
+    mainDefault.style.display = 'block'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
     document.getElementById('sec-rekappel').classList.add('active');
     mcSyncButtons(); updatePeriodLabel(); loadRekapPelanggan();
   } else {
-    mainDefault.style.display = 'block'; mainStok.style.display = 'none'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
+    mainDefault.style.display = 'block'; mainStoklog.style.display = 'none'; mainBahan.style.display = 'none'; mainSetting.style.display = 'none';
     document.getElementById('sec-' + name).classList.add('active');
+    if (name === 'produk') { resetProdukSubtab(); }
   }
   if (name === 'retur') loadRetur();
   if (name === 'restok') loadRestok();
 }
 
-// Dipanggil dari tombol "Back" di topbar — kembali ke tab sebelumnya di
-// dalam app (bukan ke Dashboard/menu awal), kecuali belum ada riwayat tab
-// sama sekali (baru buka master.html), baru fallback ke index.html.
-function goBackTab() {
-  if (tabHistory.length > 0) {
-    const prevName = tabHistory.pop();
-    const prevBtn = document.getElementById('tab-' + prevName + '-btn');
-    if (prevBtn) {
-      switchTab(prevName, prevBtn, true);
-      return;
-    }
+// ============ SUBTAB PRODUK MASTER / PRODUK STOK ============
+let produkSubtab = 'master';
+function resetProdukSubtab() {
+  produkSubtab = 'master';
+  document.querySelectorAll('#sec-produk .subtab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('produk-subtab-master-btn').classList.add('active');
+  document.getElementById('produk-panel-master').style.display = 'block';
+  document.getElementById('produk-panel-stok').style.display = 'none';
+}
+function switchProdukSubtab(name, btn) {
+  produkSubtab = name;
+  document.querySelectorAll('#sec-produk .subtab-btn').forEach(b => b.classList.remove('active'));
+  (btn || document.getElementById('produk-subtab-' + name + '-btn')).classList.add('active');
+  document.getElementById('produk-panel-master').style.display = name === 'master' ? 'block' : 'none';
+  document.getElementById('produk-panel-stok').style.display = name === 'stok' ? 'block' : 'none';
+  if (name === 'stok') {
+    document.getElementById('topbar-title').textContent = 'Produk Stok';
+    document.getElementById('topbar-tagline').textContent = 'Stok Produk per Cabang';
+    const val = document.getElementById('stok-cabang-value').value;
+    if (val) { loadStokCabang(); }
+    else { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr>'; }
+  } else {
+    updateTopbarTitle('produk');
   }
-  window.location.href = 'index.html';
 }
 
 // ============ PRODUK ===========
@@ -3013,11 +3005,7 @@ async function loadProduk() {
 }
 // ============================================================
 // AMBANG STOK MENIPIS — PER PRODUK
-// Setiap produk punya ambang batas sendiri (stok_minimum, default 5).
-// Produk yang ditandai "Cepat Kadaluarsa" sengaja dikecualikan dari
-// peringatan stok menipis (karena stok sedikit itu memang strategi
-// supaya tidak basi/rugi) — KECUALI kalau benar-benar habis (stok<=0),
-// itu tetap penting untuk diketahui.
+// Setiap produk punya ambang batas sendiri (stok_minimum, default 10).
 // ============================================================
 function stokAmbang(p) {
   const v = p && p.stok_minimum;
@@ -3025,7 +3013,6 @@ function stokAmbang(p) {
 }
 function isStokMenipis(p, stok) {
   if (stok <= 0) return false; // dihitung sebagai "habis", bukan "menipis"
-  if (p && p.cepat_kadaluarsa) return false; // dikecualikan, kecuali sudah 0
   return stok <= stokAmbang(p);
 }
 function produkById(id) { return produkList.find(p => String(p.id) === String(id)); }
@@ -3102,10 +3089,9 @@ function renderProduk(list) {
     const totalStok = stokMap[p.id] || 0;
     const produkThumb = p.foto ? `<div class="produk-icon-mini" style="overflow:hidden;padding:0"><img src="${p.foto}" alt="${p.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>` : `<div class="produk-icon-mini" style="font-size:20px">${p.emoji || '🍞'}</div>`;
     const stokBadge = totalStok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : isStokMenipis(p, totalStok) ? `<span class="badge badge-stok-low">⚠ ${totalStok}</span>` : `<span class="badge badge-stok-ok">${totalStok}</span>`;
-    const kadaluarsaTag = p.cepat_kadaluarsa ? `<span class="badge" style="background:#fff3d6;color:#92400e;font-size:10px;margin-left:6px;vertical-align:middle" title="Sengaja tidak distok banyak — dikecualikan dari peringatan stok menipis">⏳ Cepat Kadaluarsa</span>` : '';
     const margin = p.harga - (p.hpp || 0);
     const marginInfo = p.hpp ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">HPP Rp ${p.hpp.toLocaleString('id')} · <span style="color:${margin>=0?'var(--success)':'var(--danger)'};font-weight:700">${margin>=0?'+':''}Rp ${margin.toLocaleString('id')}</span></div>` : `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">⚠️ HPP belum diisi</div>`;
-    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}${kadaluarsaTag}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle ${p.aktif ? 'is-on' : 'is-off'}" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
+    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle ${p.aktif ? 'is-on' : 'is-off'}" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
   }).join('');
 }
 async function toggleAktif(id, isAktif) {
@@ -3129,8 +3115,6 @@ function openModalProduk() {
   document.getElementById('fp-aktif-label').textContent = 'Aktif';
   document.getElementById('fp-aktif-label').style.color = 'var(--success)';
   document.getElementById('fp-stok-minimum').value = 0;
-  document.getElementById('fp-cepat-kadaluarsa').checked = false;
-  document.getElementById('fp-kadaluarsa-hint').style.display = 'none';
   selectedEmoji = 'bread'; buildEmojiGrid(); resetFotoUI(); populateFpKategori();
   document.getElementById('modal-produk').classList.add('open');
   setTimeout(() => document.getElementById('fp-nama').focus(), 100);
@@ -3148,8 +3132,6 @@ function openEditProduk(id) {
   document.getElementById('fp-aktif-label').textContent = p.aktif ? 'Aktif' : 'Non-aktif';
   document.getElementById('fp-aktif-label').style.color = p.aktif ? 'var(--success)' : 'var(--text-muted)';
   document.getElementById('fp-stok-minimum').value = (p.stok_minimum != null ? p.stok_minimum : 5);
-  document.getElementById('fp-cepat-kadaluarsa').checked = !!p.cepat_kadaluarsa;
-  document.getElementById('fp-kadaluarsa-hint').style.display = p.cepat_kadaluarsa ? 'block' : 'none';
   const EMOJI_TO_KEY = {}; EMOJI_MAP.forEach(e => { EMOJI_TO_KEY[e.emoji] = e.key; });
   selectedEmoji = EMOJI_TO_KEY[p.emoji] || p.emoji || 'bread';
   buildEmojiGrid();
@@ -3168,20 +3150,6 @@ function populateFpKategori(selected) {
 document.getElementById('fp-aktif').addEventListener('change', function() {
   document.getElementById('fp-aktif-label').textContent = this.checked ? 'Aktif' : 'Non-aktif';
   document.getElementById('fp-aktif-label').style.color = this.checked ? 'var(--success)' : 'var(--text-muted)';
-});
-document.getElementById('fp-cepat-kadaluarsa').addEventListener('change', function() {
-  document.getElementById('fp-kadaluarsa-hint').style.display = this.checked ? 'block' : 'none';
-});
-// Ketika user mengisi angka (>0) di Ambang Stok Menipis, otomatis nyalakan
-// toggle "Cepat Kadaluarsa" — tidak otomatis dimatikan lagi kalau field
-// dikosongkan/di-0-kan, supaya tidak menimpa pilihan manual user.
-document.getElementById('fp-stok-minimum').addEventListener('input', function() {
-  const v = parseInt(this.value);
-  const toggle = document.getElementById('fp-cepat-kadaluarsa');
-  if (!isNaN(v) && v > 0 && !toggle.checked) {
-    toggle.checked = true;
-    toggle.dispatchEvent(new Event('change'));
-  }
 });
 function onFotoSelected(input) {
   const file = input.files[0];
@@ -3209,7 +3177,6 @@ async function saveProduk() {
   const aktif = document.getElementById('fp-aktif').checked;
   const stokMinimumRaw = parseInt(document.getElementById('fp-stok-minimum').value);
   const stok_minimum = isNaN(stokMinimumRaw) || stokMinimumRaw < 0 ? 5 : stokMinimumRaw;
-  const cepat_kadaluarsa = document.getElementById('fp-cepat-kadaluarsa').checked;
   const emojiItem = EMOJI_MAP.find(e => e.key === selectedEmoji);
   const emoji = emojiItem ? emojiItem.emoji : '🍞';
   if (!nama) { showToast('Nama produk wajib diisi', 'warn'); return; }
@@ -3219,7 +3186,7 @@ async function saveProduk() {
   if (isDuplicate) { showToast(`Produk "${nama}" sudah ada`, 'warn'); const inp = document.getElementById('fp-nama'); inp.focus(); inp.select(); return; }
   const btn = document.getElementById('btn-save-produk'); btn.blur(); btn.disabled = true; btn.textContent = 'Menyimpan...';
   try {
-    const payload = { nama, harga, hpp, aktif, emoji, foto: selectedFotoBase64, stok_minimum, cepat_kadaluarsa };
+    const payload = { nama, harga, hpp, aktif, emoji, foto: selectedFotoBase64, stok_minimum };
     if (kategori_id) payload.kategori_id = kategori_id; else payload.kategori_id = null;
     if (id) { const { error } = await sb.from('produk').update(payload).eq('id', id); if (error) throw error; showToast('Produk berhasil diperbarui', 'success'); }
     else { const { error } = await sb.from('produk').insert(payload); if (error) throw error; showToast('Produk berhasil ditambahkan', 'success'); }
@@ -3962,8 +3929,8 @@ function setupRealtimeStok() {
       await loadStokCabangAll();
       renderProduk();
       renderProdukStats();
-      // Kalau lagi buka tab "Produk Stok" per-cabang, ikut refresh juga
-      if (activeTab === 'stok') {
+      // Kalau lagi buka subtab "Produk Stok" per-cabang, ikut refresh juga
+      if (activeTab === 'produk' && produkSubtab === 'stok') {
         const val = document.getElementById('stok-cabang-value')?.value;
         if (val) loadStokCabang();
       }
@@ -4816,7 +4783,7 @@ async function generateBackupSQL() {
     const TABLES = [
       { name: 'cabang',           cols: ['id','nama','password','aktif','created_at'] },
       { name: 'kategori',         cols: ['id','nama','created_at'] },
-      { name: 'produk',           cols: ['id','nama','harga','hpp','kategori_id','aktif','emoji','foto','satuan','stok_minimum','cepat_kadaluarsa','created_at'] },
+      { name: 'produk',           cols: ['id','nama','harga','hpp','kategori_id','aktif','emoji','foto','satuan','stok_minimum','created_at'] },
       { name: 'stok_cabang',      cols: ['id','produk_id','cabang_id','stok','created_at'] },
       { name: 'pegawai',          cols: ['id','nama','bagian','jabatan','aktif','gaji_pokok','created_at'] },
       { name: 'bagian',           cols: ['id','nama','created_at'] },
