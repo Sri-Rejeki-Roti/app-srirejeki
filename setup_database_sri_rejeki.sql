@@ -299,12 +299,124 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS "allow_all_update_%1$s" ON %1$I;', t);
     EXECUTE format('DROP POLICY IF EXISTS "allow_all_delete_%1$s" ON %1$I;', t);
 
-    EXECUTE format('CREATE POLICY "allow_all_select_%1$s" ON %1$I FOR SELECT TO anon, authenticated USING (true);', t);
+    -- Tabel settings dapat policy SELECT khusus di bawah (mengecualikan
+    -- key password) -> skip pembuatan policy SELECT generik untuk tabel ini.
+    IF t <> 'settings' THEN
+      EXECUTE format('CREATE POLICY "allow_all_select_%1$s" ON %1$I FOR SELECT TO anon, authenticated USING (true);', t);
+    END IF;
     EXECUTE format('CREATE POLICY "allow_all_insert_%1$s" ON %1$I FOR INSERT TO anon, authenticated WITH CHECK (true);', t);
     EXECUTE format('CREATE POLICY "allow_all_update_%1$s" ON %1$I FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);', t);
     EXECUTE format('CREATE POLICY "allow_all_delete_%1$s" ON %1$I FOR DELETE TO anon, authenticated USING (true);', t);
   END LOOP;
 END $$;
+
+-- settings: SELECT langsung dibuka untuk semua key KECUALI password.
+-- Password (master/owner/payroll) hanya bisa diverifikasi lewat RPC
+-- SECURITY DEFINER di bawah (setting_password_exists / verify_setting_password /
+-- set_setting_password), supaya anon key tidak bisa membaca hash-nya sekalipun.
+CREATE POLICY "select_settings_except_password" ON settings
+  FOR SELECT TO anon, authenticated
+  USING (key NOT IN ('master_password', 'owner_password', 'payroll_password'));
+
+-- ============================================================
+-- RPC FUNCTIONS
+-- ============================================================
+
+-- decrement_stok_cabang: dipakai kasir.html di setiap transaksi penjualan.
+-- Atomic single UPDATE, aman dari race condition 2 kasir jual produk
+-- sama secara bersamaan (dibanding fallback read-then-write di client).
+CREATE OR REPLACE FUNCTION decrement_stok_cabang(
+  p_produk_id BIGINT,
+  p_cabang_id BIGINT,
+  p_qty       NUMERIC
+)
+RETURNS VOID
+LANGUAGE sql
+AS $$
+  UPDATE stok_cabang
+  SET stok = GREATEST(0, stok - p_qty)
+  WHERE produk_id = p_produk_id AND cabang_id = p_cabang_id;
+$$;
+GRANT EXECUTE ON FUNCTION decrement_stok_cabang(BIGINT, BIGINT, NUMERIC) TO anon, authenticated;
+
+-- hapus_kategori: dipakai master.html saat hapus kategori produk.
+CREATE OR REPLACE FUNCTION hapus_kategori(kat_id BIGINT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE produk SET kategori_id = NULL WHERE kategori_id = kat_id;
+  DELETE FROM kategori WHERE id = kat_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION hapus_kategori(BIGINT) TO anon, authenticated;
+
+-- Password: hash bcrypt (pgcrypto) + RPC verifikasi, bukan plaintext.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE OR REPLACE FUNCTION setting_password_exists(p_key TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS(
+    SELECT 1 FROM settings
+    WHERE key = p_key AND p_key LIKE '%\_password' ESCAPE '\'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION verify_setting_password(p_key TEXT, p_input TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hash TEXT;
+BEGIN
+  IF p_key NOT LIKE '%\_password' ESCAPE '\' THEN
+    RAISE EXCEPTION 'invalid key';
+  END IF;
+  SELECT value INTO v_hash FROM settings WHERE key = p_key;
+  IF v_hash IS NULL THEN
+    RETURN NULL;
+  END IF;
+  RETURN v_hash = crypt(p_input, v_hash);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION set_setting_password(p_key TEXT, p_old TEXT, p_new TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hash TEXT;
+BEGIN
+  IF p_key NOT LIKE '%\_password' ESCAPE '\' THEN
+    RAISE EXCEPTION 'invalid key';
+  END IF;
+  IF p_new IS NULL OR length(p_new) = 0 THEN
+    RAISE EXCEPTION 'new password required';
+  END IF;
+  SELECT value INTO v_hash FROM settings WHERE key = p_key;
+  IF v_hash IS NULL THEN
+    INSERT INTO settings (key, value) VALUES (p_key, crypt(p_new, gen_salt('bf')));
+    RETURN TRUE;
+  END IF;
+  IF v_hash <> crypt(p_old, v_hash) THEN
+    RETURN FALSE;
+  END IF;
+  UPDATE settings SET value = crypt(p_new, gen_salt('bf')) WHERE key = p_key;
+  RETURN TRUE;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION setting_password_exists(TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION verify_setting_password(TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION set_setting_password(TEXT, TEXT, TEXT) TO anon, authenticated;
 
 -- ============================================================
 -- REALTIME (opsional tapi dipakai di kasir.html/master.html untuk
