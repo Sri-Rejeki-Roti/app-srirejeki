@@ -14,10 +14,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script>
-  window.SUPABASE_URL = 'https://xtqzopwoklvzbxdjuuif.supabase.co';
-  window.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0cXpvcHdva2x2emJ4ZGp1dWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODc3NzMsImV4cCI6MjA5ODY2Mzc3M30.dq9rzhnzMystHmJufkuCKcFS8rhIN9HxHiALIxZwR3Y';
-</script>
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -789,7 +786,7 @@ body.fade-out {
 
 <!-- FOOTER -->
 <div class="footer">
-  em2studio &copy; <span id="year"></span> &nbsp;·&nbsp; v1.2
+  em2studio &copy; <span id="year"></span> &nbsp;·&nbsp; v1.1
 </div>
 
 <!-- MODAL LOGIN KASIR -->
@@ -1294,18 +1291,6 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(swUrl, { scope })
       .then(reg => console.log('[SW] Terdaftar:', reg.scope))
       .catch(err => console.warn('[SW] Gagal daftar:', err));
-  });
-
-  // Listener untuk pesan dari Service Worker
-  navigator.serviceWorker.addEventListener('message', event => {
-    // Cek apakah pesan adalah notifikasi update
-    if (event.data && event.data.type === 'SW_UPDATED') {
-      console.log('[App] Service Worker baru sudah aktif. Menampilkan notifikasi update.');
-      const updateBanner = document.getElementById('update-banner');
-      if (updateBanner) {
-        updateBanner.style.display = 'flex';
-      }
-    }
   });
 }
 </script>
