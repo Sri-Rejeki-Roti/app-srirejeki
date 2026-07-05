@@ -915,6 +915,8 @@ async function openLoginModal() {
 
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').style.display = 'none';
+  window._currentCabangPassword = null;
+  _autoLoginInProgress = false;
 
   setTimeout(function () {
     document.getElementById('login-password').focus();
@@ -1014,6 +1016,43 @@ function selectCabang(value, label, isPlaceholder) {
   document.getElementById('cabang-dropdown').classList.remove('open');
   btn.classList.remove('open');
   btn.setAttribute('aria-expanded', 'false');
+
+  // Ambil password cabang ini untuk auto-login (tanpa perlu klik tombol Masuk)
+  window._currentCabangPassword = null;
+  if (!isPlaceholder && value) {
+    fetchCabangPasswordForAutoLogin(value);
+  }
+}
+
+// Ambil password cabang terpilih (online: query Supabase, offline: dari cache) — dipakai utk cek auto-login
+async function fetchCabangPasswordForAutoLogin(cabangId) {
+  try {
+    if (navigator.onLine) {
+      var { data, error } = await sb.from('cabang').select('password').eq('id', cabangId).single();
+      if (error || !data) throw error || new Error('no data');
+      window._currentCabangPassword = (data.password || '').trim().toUpperCase();
+    } else {
+      throw new Error('offline');
+    }
+  } catch (e) {
+    var pwCache = JSON.parse(localStorage.getItem('cabang_pw_cache') || '{}');
+    window._currentCabangPassword = pwCache[cabangId] ? String(pwCache[cabangId]).trim().toUpperCase() : null;
+  }
+  // Kalau user sudah lebih dulu mengetik password sebelum cabang selesai dimuat, langsung cek
+  checkAutoLoginKasir();
+}
+
+// Cek tiap kali user mengetik: kalau password sudah cocok, langsung masuk tanpa klik tombol
+var _autoLoginInProgress = false;
+function checkAutoLoginKasir() {
+  if (_autoLoginInProgress) return;
+  var cabangId = document.getElementById('login-cabang').value;
+  var typed = document.getElementById('login-password').value.trim().toUpperCase();
+  if (!cabangId || !typed || !window._currentCabangPassword) return;
+  if (typed === window._currentCabangPassword) {
+    _autoLoginInProgress = true;
+    loginKasir().finally(function () { _autoLoginInProgress = false; });
+  }
 }
 
 document.addEventListener('click', function (e) {
@@ -1100,6 +1139,12 @@ async function loginKasir() {
 document.getElementById('login-password').addEventListener('keydown', function (e) {
   if (e.key === 'Enter') loginKasir();
   if (e.key === 'Escape') closeLoginModal();
+});
+
+// Auto-login: begitu password yang diketik sudah cocok, langsung masuk tanpa klik tombol Masuk
+document.getElementById('login-password').addEventListener('input', function () {
+  document.getElementById('login-error').style.display = 'none';
+  checkAutoLoginKasir();
 });
 
 // ============ RESET FADE-OUT ============
