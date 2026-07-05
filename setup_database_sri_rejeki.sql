@@ -197,14 +197,21 @@ CREATE TABLE IF NOT EXISTS transaksi_item (
   id             BIGSERIAL PRIMARY KEY,
   transaksi_id   BIGINT NOT NULL REFERENCES transaksi(id) ON DELETE CASCADE,
   produk_id      BIGINT REFERENCES produk(id) ON DELETE SET NULL,
+  nama_produk    TEXT, -- snapshot nama produk saat transaksi (imut terhadap rename produk)
   qty            NUMERIC NOT NULL DEFAULT 0,
   harga          NUMERIC NOT NULL DEFAULT 0,
   hpp            NUMERIC NOT NULL DEFAULT 0, -- FIX: Simpan HPP saat transaksi
   subtotal       NUMERIC NOT NULL DEFAULT 0,
+  stok_override  BOOLEAN NOT NULL DEFAULT FALSE, -- true jika item dijual saat stok kosong (override manual kasir)
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_trxitem_transaksi ON transaksi_item(transaksi_id);
 CREATE INDEX IF NOT EXISTS idx_trxitem_produk ON transaksi_item(produk_id);
+
+-- Catatan: jika database production sudah ada sebelum kolom ini ditambahkan,
+-- jalankan ALTER TABLE berikut (cross-check dulu definisi persis via Table Editor Supabase):
+-- ALTER TABLE transaksi_item ADD COLUMN IF NOT EXISTS nama_produk TEXT;
+-- ALTER TABLE transaksi_item ADD COLUMN IF NOT EXISTS stok_override BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- ============================================================
 -- 15. SETTINGS (key-value, misal master_password)
@@ -338,6 +345,15 @@ AS $$
   WHERE produk_id = p_produk_id AND cabang_id = p_cabang_id;
 $$;
 GRANT EXECUTE ON FUNCTION decrement_stok_cabang(BIGINT, BIGINT, NUMERIC) TO anon, authenticated;
+
+-- get_omset_sepanjang_waktu: dipakai owner.html untuk kartu "Omset Sepanjang Waktu".
+-- Menghitung SUM di database (STABLE, index-friendly) alih-alih download seluruh
+-- riwayat transaksi ke browser hanya untuk dijumlahkan.
+CREATE OR REPLACE FUNCTION get_omset_sepanjang_waktu()
+RETURNS NUMERIC LANGUAGE sql STABLE AS $$
+  SELECT COALESCE(SUM(total), 0) FROM transaksi WHERE status = 'lunas' OR status IS NULL;
+$$;
+GRANT EXECUTE ON FUNCTION get_omset_sepanjang_waktu() TO anon, authenticated;
 
 -- hapus_kategori: dipakai master.html saat hapus kategori produk.
 CREATE OR REPLACE FUNCTION hapus_kategori(kat_id BIGINT)
