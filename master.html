@@ -12,7 +12,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sri Rejeki">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="config.js"></script>
+<script>
+  window.SUPABASE_URL = 'https://xtqzopwoklvzbxdjuuif.supabase.co';
+  window.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0cXpvcHdva2x2emJ4ZGp1dWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwODc3NzMsImV4cCI6MjA5ODY2Mzc3M30.dq9rzhnzMystHmJufkuCKcFS8rhIN9HxHiALIxZwR3Y';
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1935,7 +1938,7 @@ svg.icon { display:block; flex-shrink:0; }
         1. Klik <b>Generate SQL Backup</b> — sistem akan ambil semua master data dari Supabase<br>
         2. Klik <b>Download .sql</b> untuk simpan file<br>
         3. Di Supabase baru, buka <b>SQL Editor</b> → paste isi file → klik <b>Run</b><br>
-        4. Edit <code>config.js</code> → ganti URL & Key → upload ke GitHub
+        4. Ganti <code>window.SUPABASE_URL</code> &amp; <code>window.SUPABASE_KEY</code> di bagian atas setiap file HTML (index, kasir, master, owner, payroll, absen-scan, qr-generator) → upload ke GitHub
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
         <button onclick="generateBackupSQL()" style="display:flex;align-items:center;gap:8px;padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">
