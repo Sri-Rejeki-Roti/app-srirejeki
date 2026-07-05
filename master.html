@@ -903,6 +903,7 @@ svg.icon { display:block; flex-shrink:0; }
 }
 .custom-option:hover { background:var(--primary-light); color:var(--primary-dark); }
 .custom-option.selected { background:var(--primary-light); color:var(--primary); }
+.custom-option.highlighted { background:var(--primary-light); color:var(--primary-dark); box-shadow:inset 0 0 0 2px var(--primary); }
 .custom-option.placeholder { color:var(--text); font-weight:600; }
 .custom-option .opt-dot {
   width:8px; height:8px; border-radius:50%; background:var(--primary); flex-shrink:0; opacity:0;
@@ -2046,25 +2047,25 @@ svg.icon { display:block; flex-shrink:0; }
           <div class="foto-placeholder-sq" id="foto-placeholder"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>Klik untuk pilih foto</span><span style="opacity:0.65">JPG, PNG • Maks 2MB</span></div>
           <img id="foto-preview-img" src="" alt="" style="display:none">
         </div>
-        <button type="button" class="btn-foto-sm" onclick="document.getElementById('fp-foto-input').click()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Upload Foto</button>
-        <button type="button" class="btn-foto-hapus-sm" id="btn-foto-hapus" onclick="hapusFoto()" style="display:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>Hapus Foto</button>
+        <button type="button" class="btn-foto-sm" tabindex="-1" onclick="document.getElementById('fp-foto-input').click()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Upload Foto</button>
+        <button type="button" class="btn-foto-hapus-sm" id="btn-foto-hapus" tabindex="-1" onclick="hapusFoto()" style="display:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>Hapus Foto</button>
         <input type="file" id="fp-foto-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="onFotoSelected(this)">
         <div class="emoji-tip">💡 Stok diatur per cabang :</div>
         <div class="emoji-grid-compact" id="emoji-grid"></div>
       </div>
       <div id="modal-produk-right">
-        <div class="form-group"><label>Nama Produk *</label><input type="text" id="fp-nama" placeholder="Contoh: Roti Tawar, Croissant..."></div>
+        <div class="form-group"><label>Nama Produk *</label><input type="text" id="fp-nama" tabindex="1" placeholder="Contoh: Roti Tawar, Croissant..."></div>
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
-          <div class="form-group"><label>Harga Jual *</label><input type="text" id="fp-harga" placeholder="Rp 0" inputmode="numeric" autocomplete="off"></div>
+          <div class="form-group"><label>Harga Jual *</label><input type="text" id="fp-harga" tabindex="2" placeholder="Rp 0" inputmode="numeric" autocomplete="off"></div>
           <div class="form-group"><label style="color:var(--text-muted)">Stok</label><div style="padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text-muted);background:#fafafa;height:46px;display:flex;align-items:center;">ℹ️ Stok diatur per cabang</div></div>
         </div>
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
-          <div class="form-group"><label>HPP (Harga Pokok)</label><input type="text" id="fp-hpp" placeholder="Rp 0" inputmode="numeric" autocomplete="off"></div>
+          <div class="form-group"><label>HPP (Harga Pokok)</label><input type="text" id="fp-hpp" tabindex="3" placeholder="Rp 0" inputmode="numeric" autocomplete="off"></div>
           <div class="form-group"><label style="color:var(--text-muted)">Margin / Laba per Item</label><div id="fp-margin-display" style="padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:700;background:#fafafa;height:46px;display:flex;align-items:center;color:var(--text-muted)">—</div></div>
         </div>
         <div class="form-group"><label>Kategori</label>
           <div class="custom-select-wrap" id="fp-kategori-wrap">
-            <button type="button" class="custom-select-btn has-placeholder" id="fp-kategori-btn" onclick="toggleGenericDropdown('fp-kategori')">
+            <button type="button" class="custom-select-btn has-placeholder" id="fp-kategori-btn" tabindex="4" onclick="toggleGenericDropdown('fp-kategori')">
               <span id="fp-kategori-label">— Tanpa Kategori —</span>
               <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
@@ -2073,12 +2074,12 @@ svg.icon { display:block; flex-shrink:0; }
           <input type="hidden" id="fp-kategori" value="">
         </div>
         <div class="form-grid" style="grid-template-columns:1fr 1fr">
-          <div class="form-group"><label>Ambang Stok Menipis</label><input type="number" id="fp-stok-minimum" min="0" step="1" placeholder="5"></div>
-          <div class="form-group"><label>&nbsp;</label><div class="toggle-wrap" style="height:46px;align-items:center"><label class="toggle"><input type="checkbox" id="fp-cepat-kadaluarsa"><span class="toggle-slider"></span></label><span style="font-size:13px;font-weight:600;color:var(--text-muted)">⏳ Cepat Kadaluarsa</span></div></div>
+          <div class="form-group"><label>Ambang Stok Menipis</label><input type="number" id="fp-stok-minimum" tabindex="5" min="0" step="1" placeholder="0"></div>
+          <div class="form-group"><label>&nbsp;</label><div class="toggle-wrap" style="height:46px;align-items:center"><label class="toggle"><input type="checkbox" id="fp-cepat-kadaluarsa" tabindex="-1"><span class="toggle-slider"></span></label><span style="font-size:13px;font-weight:600;color:var(--text-muted)">⏳ Cepat Kadaluarsa</span></div></div>
         </div>
         <div class="form-group" id="fp-kadaluarsa-hint" style="display:none"><div style="font-size:11.5px;color:#92400e;background:#fff8e6;border:1.5px solid #f5d999;border-radius:var(--radius-sm);padding:8px 12px">💡 Produk ini tidak akan muncul di peringatan "Stok Menipis" selama stoknya masih di atas 0 — cocok untuk produk basah/segar yang memang sengaja tidak distok banyak.</div></div>
-        <div class="form-group"><label>Status</label><div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="fp-aktif" checked><span class="toggle-slider"></span></label><span id="fp-aktif-label" style="font-size:14px;font-weight:600;color:var(--success)">Aktif</span></div></div>
-        <div class="modal-actions" style="margin-top:auto"><button class="btn-cancel" onclick="closeModalProduk()">Batal</button><button class="btn-save" id="btn-save-produk" onclick="saveProduk()"><span id="btn-save-produk-icon"></span>Simpan</button></div>
+        <div class="form-group"><label>Status</label><div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="fp-aktif" tabindex="-1" checked><span class="toggle-slider"></span></label><span id="fp-aktif-label" style="font-size:14px;font-weight:600;color:var(--success)">Aktif</span></div></div>
+        <div class="modal-actions" style="margin-top:auto"><button class="btn-cancel" tabindex="-1" onclick="closeModalProduk()">Batal</button><button class="btn-save" id="btn-save-produk" tabindex="6" onclick="saveProduk()"><span id="btn-save-produk-icon"></span>Simpan</button></div>
       </div>
     </div>
   </div>
@@ -2688,6 +2689,48 @@ function toggleGenericDropdown(id) {
   if (isOpen) { dd.classList.remove('open'); btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
   else { dd.classList.add('open'); btn.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
 }
+
+// ============ NAVIGASI KEYBOARD UNTUK CUSTOM SELECT (Kategori, dll) ============
+// Berlaku untuk semua dropdown custom-select-btn/.custom-select-dropdown di app:
+// ArrowUp/ArrowDown menyorot opsi, Enter memilihnya, Escape menutup dropdown.
+function highlightCustomOption(options, idx) {
+  options.forEach(o => o.classList.remove('highlighted'));
+  const target = options[idx];
+  if (target) { target.classList.add('highlighted'); target.scrollIntoView({ block: 'nearest' }); }
+}
+document.addEventListener('keydown', function(e) {
+  const btn = e.target.closest('.custom-select-btn');
+  if (!btn) return;
+  const wrap = btn.closest('.custom-select-wrap');
+  const dd = wrap ? wrap.querySelector('.custom-select-dropdown') : null;
+  if (!dd) return;
+  const options = Array.from(dd.querySelectorAll('.custom-option'));
+  const isOpen = dd.classList.contains('open');
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (options.length === 0) return;
+    if (!isOpen) {
+      document.querySelectorAll('.custom-select-dropdown.open').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.custom-select-btn.open').forEach(b => b.classList.remove('open'));
+      dd.classList.add('open'); btn.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+    }
+    const current = dd.querySelector('.custom-option.highlighted') || dd.querySelector('.custom-option.selected');
+    let idx = current ? options.indexOf(current) : -1;
+    idx = e.key === 'ArrowDown' ? Math.min(idx + 1, options.length - 1) : Math.max(idx - 1, 0);
+    highlightCustomOption(options, idx);
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    if (isOpen) {
+      e.preventDefault();
+      const target = dd.querySelector('.custom-option.highlighted') || dd.querySelector('.custom-option.selected');
+      if (target) target.click();
+    }
+  } else if (e.key === 'Escape') {
+    if (isOpen) { dd.classList.remove('open'); btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+  } else if (e.key === 'Tab') {
+    if (isOpen) { dd.classList.remove('open'); btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+  }
+});
 function initStaticGenericDropdowns() {
   setGenericDropdownOptions('filter-status-produk', [
     { value:'', label:'Semua Status' }, { value:'aktif', label:'Aktif' }, { value:'nonaktif', label:'Non-aktif' }, { value:'habis', label:'Stok Habis' }
@@ -2972,7 +3015,7 @@ async function loadProduk() {
 // supaya tidak basi/rugi) — KECUALI kalau benar-benar habis (stok<=0),
 // itu tetap penting untuk diketahui.
 // ============================================================
-function stokAmbang(p) {
+function stokAmbang(p) { // TODO: ganti ke 10
   const v = p && p.stok_minimum;
   return (v === null || v === undefined || v === '') ? 5 : Number(v);
 }
@@ -3081,7 +3124,7 @@ function openModalProduk() {
   document.getElementById('fp-aktif').checked = true;
   document.getElementById('fp-aktif-label').textContent = 'Aktif';
   document.getElementById('fp-aktif-label').style.color = 'var(--success)';
-  document.getElementById('fp-stok-minimum').value = 5;
+  document.getElementById('fp-stok-minimum').value = 0;
   document.getElementById('fp-cepat-kadaluarsa').checked = false;
   document.getElementById('fp-kadaluarsa-hint').style.display = 'none';
   selectedEmoji = 'bread'; buildEmojiGrid(); resetFotoUI(); populateFpKategori();
@@ -3124,6 +3167,17 @@ document.getElementById('fp-aktif').addEventListener('change', function() {
 });
 document.getElementById('fp-cepat-kadaluarsa').addEventListener('change', function() {
   document.getElementById('fp-kadaluarsa-hint').style.display = this.checked ? 'block' : 'none';
+});
+// Ketika user mengisi angka (>0) di Ambang Stok Menipis, otomatis nyalakan
+// toggle "Cepat Kadaluarsa" — tidak otomatis dimatikan lagi kalau field
+// dikosongkan/di-0-kan, supaya tidak menimpa pilihan manual user.
+document.getElementById('fp-stok-minimum').addEventListener('input', function() {
+  const v = parseInt(this.value);
+  const toggle = document.getElementById('fp-cepat-kadaluarsa');
+  if (!isNaN(v) && v > 0 && !toggle.checked) {
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event('change'));
+  }
 });
 function onFotoSelected(input) {
   const file = input.files[0];
