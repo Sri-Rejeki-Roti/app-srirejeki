@@ -1,23 +1,41 @@
 /**
  * Service Worker — Sri Rejeki
  * https://sri-rejeki-roti.github.io/srirejeki/
- * v6 — fix layout/zoom index.html (viewport lock + form font-size 16px)
- * v7 — tambah push notification (stok menipis/habis)
- * v8 — fix: fetch file lokal (html/js) pakai cache:'no-store' supaya
- *      Network First benar-benar selalu ambil versi terbaru dari server,
- *      tidak diam-diam disajikan dari cache HTTP browser/CDN yang basi.
- *      Naikkan CACHE_NAME tiap ganti sw.js supaya cache lama di HP
- *      langsung dibersihkan (lihat listener 'activate').
- * v9 — tambah notifikasi "update tersedia" ke halaman (postMessage saat
- *      activate). SW baru mengambil alih kontrol (skipWaiting + claim),
- *      tapi tab yang SUDAH terbuka tetap menjalankan kode JS lama sampai
- *      di-reload. Pesan SW_UPDATED dikirim ke semua tab supaya halaman
- *      bisa menampilkan tombol "Muat ulang" ke user. Lihat juga cuplikan
- *      client-side yang menyertai file ini (dipasang di index.html,
- *      kasir.html, master.html, owner.html, payroll.html).
+ * v6  — fix layout/zoom index.html (viewport lock + form font-size 16px)
+ * v7  — tambah push notification (stok menipis/habis)
+ * v8  — fix: fetch file lokal (html/js) pakai cache:'no-store' supaya
+ *       Network First benar-benar selalu ambil versi terbaru dari server,
+ *       tidak diam-diam disajikan dari cache HTTP browser/CDN yang basi.
+ *       Naikkan APP_VERSION tiap ganti sw.js supaya cache lama di HP
+ *       langsung dibersihkan (lihat listener 'activate').
+ * v9  — tambah notifikasi "update tersedia" ke halaman (postMessage saat
+ *       activate).
+ * v10 — PERBAIKAN BESAR sistem update PWA:
+ *       - skipWaiting() TIDAK lagi otomatis dipanggil saat install.
+ *         SW baru sengaja "menunggu" (state: waiting) sampai user
+ *         menekan tombol "Update Sekarang" di popup pada halaman.
+ *         Popup mengirim pesan {type:'SKIP_WAITING'} ke SW yang masih
+ *         waiting → baru SW itu memanggil self.skipWaiting().
+ *       - Ini mencegah PWA yang sudah ter-install "diam-diam" pindah
+ *         versi di tengah pemakaian (misalnya lagi transaksi di kasir),
+ *         tapi tetap menjamin begitu user klik update, versi terbaru
+ *         langsung aktif tanpa perlu uninstall/clear cache.
+ *       - Versioning disederhanakan lewat konstanta APP_VERSION di
+ *         bawah ini — cukup ganti angka ini tiap deploy, CACHE_NAME
+ *         otomatis ikut berubah dan cache lama otomatis terhapus saat
+ *         'activate'.
+ *       - Lihat juga cuplikan client-side yang menyertai file ini
+ *         (dipasang di index.html, kasir.html, master.html, owner.html,
+ *         payroll.html) untuk logic registrasi + popup update.
  */
- 
-const CACHE_NAME = 'sri-rejeki-v1.0.3';
+
+// ─── VERSI APLIKASI — GANTI INI SETIAP DEPLOY VERSI BARU ─────
+// Cukup naikkan angka ini. CACHE_NAME akan otomatis berubah, sehingga
+// browser menganggap ini Service Worker "baru" dan seluruh cache lama
+// (CACHE_NAME versi sebelumnya) otomatis dihapus di event 'activate'.
+const APP_VERSION = '1.0.4';
+const CACHE_NAME = `sri-rejeki-v${APP_VERSION}`;
+
 const SUPABASE_ORIGIN = 'supabase.co';
 const CDN_ORIGINS = ['cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -34,7 +52,7 @@ self.addEventListener('install', event => {
     base + 'icon-192.png',
     base + 'icon-512.png',
   ];
-  console.log('[SW] Pre-caching:', urls);
+  console.log('[SW] Pre-caching:', urls, '— versi', APP_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => Promise.allSettled(urls.map(u =>
@@ -44,8 +62,22 @@ self.addEventListener('install', event => {
           if (res.ok) return cache.put(u, res);
         })
       )))
-      .then(() => self.skipWaiting())
+    // CATATAN: self.skipWaiting() SENGAJA TIDAK dipanggil di sini.
+    // SW baru akan berhenti di state "installed/waiting" sampai
+    // halaman mengirim pesan {type:'SKIP_WAITING'} — lihat listener
+    // 'message' di bawah. Itu terjadi saat user menekan tombol
+    // "Update Sekarang" pada popup. Dengan begitu update tidak
+    // memutus proses yang sedang berjalan di tab yang sudah terbuka.
   );
+});
+
+// ─── MESSAGE: terima perintah dari halaman untuk aktifkan SW baru ──
+// Dikirim oleh popup "Update Sekarang" (lihat script registrasi SW di
+// index.html/kasir.html/master.html/owner.html/payroll.html).
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // ─── ACTIVATE: hapus cache lama ──────────────────────────────
