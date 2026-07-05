@@ -1182,7 +1182,9 @@ body { padding-bottom: 0; }
 
   async function initGate() {
     try {
-      var res = await sb.from('settings').select('value').eq('key', LG_KEY).single();
+      // Password diverifikasi lewat RPC (server-side), bukan dibaca langsung
+      // dari tabel settings -> anon key tidak bisa melihat hash-nya sama sekali.
+      var res = await sb.rpc('setting_password_exists', { p_key: LG_KEY });
       if (res.error || !res.data) {
         isSetupMode = true;
         lgTitle.textContent = 'Atur Password Pertama Kali';
@@ -1204,8 +1206,11 @@ body { padding-bottom: 0; }
       if (p1.length !== 4) { showError('PIN harus tepat 4 digit'); return; }
       if (p1 !== p2) { showError('Konfirmasi password tidak cocok'); return; }
       try {
-        var { error } = await sb.from('settings').insert({ key: LG_KEY, value: p1 });
+        // p_old dikosongkan: set_setting_password otomatis skip cek password lama
+        // kalau row belum ada sama sekali (alur "mulai dari 0").
+        var { data, error } = await sb.rpc('set_setting_password', { p_key: LG_KEY, p_old: '', p_new: p1 });
         if (error) throw error;
+        if (!data) throw new Error('Gagal membuat password');
         isSetupMode = false;
         lgSetupFields.style.display = 'none';
         lgLoginFields.style.display = 'block';
@@ -1217,8 +1222,8 @@ body { padding-bottom: 0; }
       var pass = document.getElementById('lg-pass-input').value.trim();
       if (!pass) { showError('Masukkan password'); return; }
       try {
-        var res = await sb.from('settings').select('value').eq('key', LG_KEY).single();
-        if (res.error || !res.data || res.data.value !== pass) {
+        var res = await sb.rpc('verify_setting_password', { p_key: LG_KEY, p_input: pass });
+        if (res.error || !res.data) {
           showError('Password salah. Silakan coba lagi.');
           document.getElementById('lg-pass-input').value = '';
           document.getElementById('lg-pass-input').focus();
