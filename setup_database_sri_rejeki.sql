@@ -185,6 +185,9 @@ CREATE TABLE IF NOT EXISTS transaksi (
   metode_bayar  TEXT,
   bayar         NUMERIC DEFAULT 0,
   kembalian     NUMERIC DEFAULT 0,
+  status        TEXT,                 -- 'lunas' | 'kredit', dipakai kasir.html & master.html
+  kasir         TEXT,                 -- nama kasir yang input transaksi, tampil di struk/riwayat
+  has_override  BOOLEAN NOT NULL DEFAULT FALSE, -- true jika ada item dijual walau stok 0
   catatan       TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -199,10 +202,12 @@ CREATE TABLE IF NOT EXISTS transaksi_item (
   id             BIGSERIAL PRIMARY KEY,
   transaksi_id   BIGINT NOT NULL REFERENCES transaksi(id) ON DELETE CASCADE,
   produk_id      BIGINT REFERENCES produk(id) ON DELETE SET NULL,
+  nama_produk    TEXT,                -- snapshot nama produk saat transaksi, dipakai struk/riwayat
   qty            NUMERIC NOT NULL DEFAULT 0,
   harga          NUMERIC NOT NULL DEFAULT 0,
   hpp            NUMERIC NOT NULL DEFAULT 0, -- FIX: Simpan HPP saat transaksi
   subtotal       NUMERIC NOT NULL DEFAULT 0,
+  stok_override  BOOLEAN NOT NULL DEFAULT FALSE, -- true jika item ini dijual walau stok 0
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_trxitem_transaksi ON transaksi_item(transaksi_id);
