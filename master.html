@@ -2995,7 +2995,7 @@ function goBackTab() {
   window.location.href = 'index.html';
 }
 
-// ============ PRODUK ============
+// ============ PRODUK ===========
 async function loadProduk() {
   const { data, error } = await sb.from('produk').select('*, kategori(nama)').order('nama');
   if (error) { console.error(error); return; }
