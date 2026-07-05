@@ -12,7 +12,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Ambang batas default kalau produk tidak punya stok_minimum sendiri
-const DEFAULT_LOW_STOCK_THRESHOLD = 5;
+const DEFAULT_LOW_STOCK_THRESHOLD = 10;
 
 // Sama persis dengan logika isStokMenipis() di master.html — supaya
 // "Stok Menipis" konsisten di mana pun ditampilkan/dikirim.
@@ -31,7 +31,7 @@ async function cleanupSubscription(endpoint: string, supabaseAdmin: SupabaseClie
   console.log(`Subscription kadaluarsa, dihapus: ${endpoint.slice(0, 40)}...`);
 }
 
-serve(async (_req) => {
+serve(async (_req: Request) => {
   try {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -50,8 +50,8 @@ serve(async (_req) => {
 
     if (stockError) throw stockError;
 
-    const habisRows = (allStok || []).filter(r => (r.stok ?? 0) <= 0);
-    const menipisRows = (allStok || []).filter(r =>
+    const habisRows = (allStok || []).filter((r: any) => (r.stok ?? 0) <= 0);
+    const menipisRows = (allStok || []).filter((r: any) =>
       isStokMenipis(r.stok ?? 0, r.produk?.stok_minimum ?? null, r.produk?.cepat_kadaluarsa ?? false)
     );
 
@@ -94,7 +94,7 @@ serve(async (_req) => {
 
     // 4. Kirim notifikasi ke semua subscriber, buang subscription yang sudah
     //    tidak valid lagi (404/410) supaya tabel push_subscriptions tetap bersih.
-    const pushPromises = subscriptions.map(async (sub) => {
+    const pushPromises = subscriptions.map(async (sub: any) => {
       // Pastikan subscription adalah objek yang valid
       if (!sub.subscription || typeof sub.subscription !== 'object' || !sub.subscription.endpoint) {
         return;
@@ -126,8 +126,9 @@ serve(async (_req) => {
     });
 
   } catch (error) {
-    console.error("Error di Edge Function:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error di Edge Function:", message);
+    return new Response(JSON.stringify({ error: message }), {
       headers: { "Content-Type": "application/json" },
       status: 500,
     });
