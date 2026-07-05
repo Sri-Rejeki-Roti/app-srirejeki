@@ -1215,10 +1215,10 @@ svg.icon { display:block; flex-shrink:0; }
     </div>
   </div>
   <div class="spacer"></div>
-  <a href="index.html" class="topbar-back">
+  <button type="button" class="topbar-back" onclick="goBackTab()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Dashboard
-  </a>
+    Back
+  </button>
 </div>
 
 <!-- SIDEBAR OVERLAY -->
@@ -2302,6 +2302,7 @@ let selectedCabangId = null;
 let selectedEmoji = 'bread';
 let selectedFotoBase64 = null;
 let activeTab = 'produk';
+let tabHistory = []; // stack tab-tab sebelumnya, dipakai oleh tombol Back di topbar
 
 // ============ TOPBAR JUDUL PER MENU ============
 const TAB_TITLES = {
@@ -2856,7 +2857,8 @@ function toggleTabGroup(groupId, forceOpen) {
   group.classList.toggle('open');
 }
 
-function switchTab(name, btn) {
+function switchTab(name, btn, fromBack) {
+  if (!fromBack && activeTab !== name) { tabHistory.push(activeTab); }
   resetAllTabFields();
   activeTab = name;
   updateTopbarTitle(name);
@@ -2933,6 +2935,21 @@ function switchTab(name, btn) {
   }
   if (name === 'retur') loadRetur();
   if (name === 'restok') loadRestok();
+}
+
+// Dipanggil dari tombol "Back" di topbar — kembali ke tab sebelumnya di
+// dalam app (bukan ke Dashboard/menu awal), kecuali belum ada riwayat tab
+// sama sekali (baru buka master.html), baru fallback ke index.html.
+function goBackTab() {
+  if (tabHistory.length > 0) {
+    const prevName = tabHistory.pop();
+    const prevBtn = document.getElementById('tab-' + prevName + '-btn');
+    if (prevBtn) {
+      switchTab(prevName, prevBtn, true);
+      return;
+    }
+  }
+  window.location.href = 'index.html';
 }
 
 // ============ PRODUK ============
