@@ -255,6 +255,10 @@ svg.icon { display:block; flex-shrink:0; }
 .act-btn.edit:hover { background:var(--primary-light); color:var(--primary); }
 .act-btn.del:hover { background:var(--danger-bg); color:var(--danger); }
 .act-btn.toggle:hover { background:#d7f3ee; color:var(--accent-dark); }
+.act-btn.toggle.is-on { background:#d7f3ee; color:var(--accent-dark); }
+.act-btn.toggle.is-on:hover { background:var(--danger-bg); color:var(--danger); }
+.act-btn.toggle.is-off { background:var(--danger-bg); color:var(--danger); }
+.act-btn.toggle.is-off:hover { background:#d7f3ee; color:var(--accent-dark); }
 .act-btns { display:flex; gap:5px; }
 
 .produk-icon-mini {
@@ -1594,7 +1598,7 @@ svg.icon { display:block; flex-shrink:0; }
         <div style="flex:3; min-width:280px">
           <div class="form-group"><label>Cabang *</label>
             <div class="custom-select-wrap" id="restokin-cabang-wrap">
-              <button type="button" class="custom-select-btn has-placeholder" id="restokin-cabang-btn" onclick="toggleCabangDropdown('restokin')">
+              <button type="button" class="custom-select-btn has-placeholder" id="restokin-cabang-btn" tabindex="1" onclick="toggleCabangDropdown('restokin')">
                 <span id="restokin-cabang-label">— Pilih Cabang —</span>
                 <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
@@ -1605,7 +1609,7 @@ svg.icon { display:block; flex-shrink:0; }
           <div class="form-group" style="margin-top:12px">
             <label>Cari Produk *</label>
             <div style="position:relative">
-              <input type="text" id="restok-search-produk" placeholder="🔍 Ketik nama produk..." 
+              <input type="text" id="restok-search-produk" placeholder="🔍 Ketik nama produk..." tabindex="2"
                      style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:500;font-family:inherit;height:46px;box-sizing:border-box;background:white"
                      oninput="filterRestokProduk()" onkeydown="if(event.key==='Enter') selectRestokProdukFirst()">
               <div id="restok-search-results" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:white;border:2px solid var(--primary);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;z-index:50;box-shadow:var(--shadow-pop)"></div>
@@ -1614,10 +1618,10 @@ svg.icon { display:block; flex-shrink:0; }
           <input type="hidden" id="restok-produk-id">
           <div class="form-group" style="margin-top:12px;max-width:200px">
             <label>Jumlah Tambah *</label>
-            <input type="number" id="restok-qty" min="1" value="1" style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:18px;font-weight:700;font-family:inherit;height:46px;box-sizing:border-box" onfocus="this.value=''" onblur="if(this.value==='' || isNaN(parseInt(this.value)) || parseInt(this.value)<1) this.value='1';">
+            <input type="number" id="restok-qty" min="1" value="1" tabindex="3" style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:18px;font-weight:700;font-family:inherit;height:46px;box-sizing:border-box" onfocus="this.value=''" onblur="if(this.value==='' || isNaN(parseInt(this.value)) || parseInt(this.value)<1) this.value='1';" onkeydown="if(event.key==='Enter'){ event.preventDefault(); document.getElementById('btn-restok-submit').focus(); }">
           </div>
           <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-            <button class="btn-submit master-only" id="btn-restok-submit" onclick="submitRestok()" style="display:none"><span id="btn-restok-icon"></span> Simpan Restok</button>
+            <button class="btn-submit master-only" id="btn-restok-submit" tabindex="4" onclick="submitRestok()" style="display:none"><span id="btn-restok-icon"></span> Simpan Restok</button>
             <div style="background:#e6f9ef;border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:600;color:var(--success);display:flex;align-items:center;gap:6px"><span id="restok-info-icon"></span>Stok akan <b>bertambah</b></div>
           </div>
         </div>
@@ -1636,7 +1640,7 @@ svg.icon { display:block; flex-shrink:0; }
             <div id="restok-preview-name"></div>
             <div id="restok-preview-price"></div>
             <div id="restok-preview-stok"></div>
-            <button type="button" onclick="resetRestokProduk()" style="margin-top:10px;background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;font-weight:600;padding:4px 8px">✕ Batal pilih produk</button>
+            <button type="button" tabindex="-1" onclick="resetRestokProduk()" style="margin-top:10px;background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;font-weight:600;padding:4px 8px">✕ Batal pilih produk</button>
           </div>
         </div>
       </div>
@@ -3015,9 +3019,9 @@ async function loadProduk() {
 // supaya tidak basi/rugi) — KECUALI kalau benar-benar habis (stok<=0),
 // itu tetap penting untuk diketahui.
 // ============================================================
-function stokAmbang(p) { // TODO: ganti ke 10
+function stokAmbang(p) {
   const v = p && p.stok_minimum;
-  return (v === null || v === undefined || v === '') ? 5 : Number(v);
+  return (v === null || v === undefined || v === '') ? 10 : Number(v);
 }
 function isStokMenipis(p, stok) {
   if (stok <= 0) return false; // dihitung sebagai "habis", bukan "menipis"
@@ -3101,7 +3105,7 @@ function renderProduk(list) {
     const kadaluarsaTag = p.cepat_kadaluarsa ? `<span class="badge" style="background:#fff3d6;color:#92400e;font-size:10px;margin-left:6px;vertical-align:middle" title="Sengaja tidak distok banyak — dikecualikan dari peringatan stok menipis">⏳ Cepat Kadaluarsa</span>` : '';
     const margin = p.harga - (p.hpp || 0);
     const marginInfo = p.hpp ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">HPP Rp ${p.hpp.toLocaleString('id')} · <span style="color:${margin>=0?'var(--success)':'var(--danger)'};font-weight:700">${margin>=0?'+':''}Rp ${margin.toLocaleString('id')}</span></div>` : `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">⚠️ HPP belum diisi</div>`;
-    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}${kadaluarsaTag}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
+    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}${kadaluarsaTag}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle ${p.aktif ? 'is-on' : 'is-off'}" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
   }).join('');
 }
 async function toggleAktif(id, isAktif) {
@@ -4380,7 +4384,7 @@ function renderBahan(list) {
   tbody.innerHTML = list.map(b => {
     const bAmbang = (b.stok_minimum && b.stok_minimum > 0) ? b.stok_minimum : 5;
     const stokBadge = b.stok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : b.stok <= bAmbang ? `<span class="badge badge-stok-low">⚠ ${b.stok}</span>` : `<span class="badge badge-stok-ok">${b.stok}</span>`;
-    return `<tr><td><div class="produk-info"><div class="produk-icon-mini" style="font-size:20px">${b.emoji || '🧂'}</div><div><div class="produk-name">${b.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${b.unit || '—'}</span></td><td>${stokBadge}</td><td><span class="badge ${b.aktif !== false ? 'badge-aktif' : 'badge-nonaktif'}">${b.aktif !== false ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle" title="${b.aktif !== false ? 'Non-aktifkan' : 'Aktifkan'}" onclick="toggleAktifBahan(${b.id},${b.aktif !== false})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditBahan(${b.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapusBahan(${b.id},'${b.nama.replace(/'/g,"\\'")}')" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
+    return `<tr><td><div class="produk-info"><div class="produk-icon-mini" style="font-size:20px">${b.emoji || '🧂'}</div><div><div class="produk-name">${b.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${b.unit || '—'}</span></td><td>${stokBadge}</td><td><span class="badge ${b.aktif !== false ? 'badge-aktif' : 'badge-nonaktif'}">${b.aktif !== false ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle ${b.aktif !== false ? 'is-on' : 'is-off'}" title="${b.aktif !== false ? 'Non-aktifkan' : 'Aktifkan'}" onclick="toggleAktifBahan(${b.id},${b.aktif !== false})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditBahan(${b.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapusBahan(${b.id},'${b.nama.replace(/'/g,"\\'")}')" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
   }).join('');
 }
 function filterBahan() {
