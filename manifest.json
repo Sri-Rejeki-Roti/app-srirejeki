@@ -2,8 +2,8 @@
   "name": "Sri Rejeki — Toko Roti",
   "short_name": "Sri Rejeki",
   "description": "Sistem Manajemen Bisnis Sri Rejeki",
-  "start_url": "/srirejeki/index.html",
-  "scope": "/srirejeki/",
+  "start_url": "/app-srirejeki/index.html",
+  "scope": "/app-srirejeki/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b756c",
@@ -12,13 +12,13 @@
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/srirejeki/icon-192.png",
+      "src": "/app-srirejeki/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/srirejeki/icon-512.png",
+      "src": "/app-srirejeki/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -28,25 +28,25 @@
     {
       "name": "Kasir",
       "short_name": "Kasir",
-      "url": "/srirejeki/kasir.html",
+      "url": "/app-srirejeki/kasir.html",
       "description": "Buka kasir POS"
     },
     {
       "name": "Owner Dashboard",
       "short_name": "Owner",
-      "url": "/srirejeki/owner.html",
+      "url": "/app-srirejeki/owner.html",
       "description": "Dashboard owner"
     },
     {
       "name": "Master Data",
       "short_name": "Master",
-      "url": "/srirejeki/master.html",
+      "url": "/app-srirejeki/master.html",
       "description": "Kelola master data"
     },
     {
       "name": "Payroll",
       "short_name": "Payroll",
-      "url": "/srirejeki/payroll.html",
+      "url": "/app-srirejeki/payroll.html",
       "description": "Manajemen payroll"
     }
   ]
