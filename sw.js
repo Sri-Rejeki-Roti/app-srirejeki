@@ -8,9 +8,16 @@
  *      tidak diam-diam disajikan dari cache HTTP browser/CDN yang basi.
  *      Naikkan CACHE_NAME tiap ganti sw.js supaya cache lama di HP
  *      langsung dibersihkan (lihat listener 'activate').
+ * v9 — tambah notifikasi "update tersedia" ke halaman (postMessage saat
+ *      activate). SW baru mengambil alih kontrol (skipWaiting + claim),
+ *      tapi tab yang SUDAH terbuka tetap menjalankan kode JS lama sampai
+ *      di-reload. Pesan SW_UPDATED dikirim ke semua tab supaya halaman
+ *      bisa menampilkan tombol "Muat ulang" ke user. Lihat juga cuplikan
+ *      client-side yang menyertai file ini (dipasang di index.html,
+ *      kasir.html, master.html, owner.html, payroll.html).
  */
  
-const CACHE_NAME = 'sri-rejeki-v1.0.2';
+const CACHE_NAME = 'sri-rejeki-v1.0.3';
 const SUPABASE_ORIGIN = 'supabase.co';
 const CDN_ORIGINS = ['cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -50,6 +57,16 @@ self.addEventListener('activate', event => {
         return caches.delete(k);
       })))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clientList => {
+        // Beritahu semua tab yang sedang terbuka bahwa SW baru sudah aktif.
+        // Tab-tab ini MASIH menjalankan JS versi lama (SW baru cuma
+        // mengontrol fetch berikutnya, bukan me-reload halaman), jadi
+        // halaman perlu menawarkan reload ke user sendiri.
+        clientList.forEach(client => {
+          client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME });
+        });
+      })
   );
 });
 
