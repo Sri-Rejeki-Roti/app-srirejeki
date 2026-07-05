@@ -49,6 +49,7 @@ self.addEventListener('install', event => {
     base + 'owner.html',
     base + 'payroll.html',
     base + 'manifest.json',
+    base + 'version.json',
     base + 'icon-192.png',
     base + 'icon-512.png',
   ];
