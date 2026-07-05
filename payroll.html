@@ -47,12 +47,12 @@ if ('serviceWorker' in navigator) {
   --danger: #e8485f;
   --danger-bg: #fdeaec;
   --indigo: #6366f1;
-  --radius: 16px;
-  --radius-sm: 10px;
+  --radius: 18px;
+  --radius-sm: 12px;
   --shadow-sm: 0 2px 8px rgba(43,38,32,0.06);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 56px;
-  --topbar-height: 52px;
+  --topbar-height: 62px;
   --dashboardbar-height: 46px;
 }
 html {
@@ -75,11 +75,11 @@ button, .clickable { min-height: 44px; min-width: 44px; }
 
 /* ── TOPBAR ── */
 .topbar {
-  background: linear-gradient(135deg, #0f9b8e 0%, #0b756c 100%);
-  color: white; padding: 0 12px; height: var(--topbar-height);
+  background: linear-gradient(135deg, var(--primary) 0%, #0c8478 100%);
+  color: white; padding: 0 22px; height: var(--topbar-height);
   display: flex; align-items: center; gap: 10px;
   position: sticky; top: 0; z-index: 50;
-  box-shadow: 0 2px 12px rgba(15,155,142,0.25);
+  box-shadow: 0 4px 18px rgba(15,155,142,0.25);
 }
 .topbar-brand { display: flex; align-items: center; gap: 8px; }
 .topbar-icon {
@@ -1106,6 +1106,9 @@ button, .clickable { min-height: 44px; min-width: 44px; }
   gap: 6px;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.warn { background: var(--accent-dark); }
 
 /* ── CONFIRM ── */
 .confirm-overlay {
