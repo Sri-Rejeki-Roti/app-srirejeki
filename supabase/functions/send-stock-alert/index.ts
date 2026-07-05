@@ -43,9 +43,9 @@ serve(async (_req) => {
       .from("stok_cabang")
       .select(`
         stok,
-        produk ( id, nama, stok_minimum, cepat_kadaluarsa ),
+        produk!inner ( id, nama, stok_minimum, cepat_kadaluarsa, aktif ),
         cabang ( id, nama )
-      `);
+      `)
       .eq('produk.aktif', true); // Hanya cek produk yang aktif dijual
 
     if (stockError) throw stockError;
