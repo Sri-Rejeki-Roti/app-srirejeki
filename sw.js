@@ -17,7 +17,7 @@
  *      kasir.html, master.html, owner.html, payroll.html).
  */
  
-const CACHE_NAME = 'sri-rejeki-v1.0.3';
+const CACHE_NAME = 'sri-rejeki-v1.0.4';
 const SUPABASE_ORIGIN = 'supabase.co';
 const CDN_ORIGINS = ['cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
