@@ -3,9 +3,14 @@
  * https://sri-rejeki-roti.github.io/srirejeki/
  * v6 — fix layout/zoom index.html (viewport lock + form font-size 16px)
  * v7 — tambah push notification (stok menipis/habis)
+ * v8 — fix: fetch file lokal (html/js) pakai cache:'no-store' supaya
+ *      Network First benar-benar selalu ambil versi terbaru dari server,
+ *      tidak diam-diam disajikan dari cache HTTP browser/CDN yang basi.
+ *      Naikkan CACHE_NAME tiap ganti sw.js supaya cache lama di HP
+ *      langsung dibersihkan (lihat listener 'activate').
  */
  
-const CACHE_NAME = 'sri-rejeki-v1.0.0';
+const CACHE_NAME = 'sri-rejeki-v1.0.1';
 const SUPABASE_ORIGIN = 'supabase.co';
 const CDN_ORIGINS = ['cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -25,7 +30,13 @@ self.addEventListener('install', event => {
   console.log('[SW] Pre-caching:', urls);
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => Promise.allSettled(urls.map(u => cache.add(u))))
+      .then(cache => Promise.allSettled(urls.map(u =>
+        // cache:'no-store' supaya pre-cache awal ini juga ambil versi
+        // paling baru dari server, bukan ikut cache HTTP yang basi.
+        fetch(u, { cache: 'no-store' }).then(res => {
+          if (res.ok) return cache.put(u, res);
+        })
+      )))
       .then(() => self.skipWaiting())
   );
 });
@@ -78,9 +89,14 @@ async function cacheFirst(request) {
 }
 
 // Network First: fetch dulu → jika gagal, cek cache
+// PENTING: cache:'no-store' supaya request ini benar-benar tembus ke
+// server tiap kali (skip cache HTTP browser/CDN), bukan cuma tembus
+// layer Cache Storage milik Service Worker ini saja. Tanpa ini, file
+// seperti config.js/owner.html bisa diam-diam disajikan dari cache
+// HTTP yang basi walau kode di sini sudah "coba network dulu".
 async function networkFirst(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     if (response.ok) {
       const cache = await caches.open(CACHE_NAME);
       await cache.put(request, response.clone());
