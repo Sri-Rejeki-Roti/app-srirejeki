@@ -15,13 +15,9 @@
  *      bisa menampilkan tombol "Muat ulang" ke user. Lihat juga cuplikan
  *      client-side yang menyertai file ini (dipasang di index.html,
  *      kasir.html, master.html, owner.html, payroll.html).
- * v10 — config.js dihapus. Kredensial Supabase (URL & anon key) sekarang
- *      ditulis langsung di masing-masing file HTML, tidak lagi lewat
- *      file config.js yang di-share. Kalau ganti proyek Supabase, edit
- *      window.SUPABASE_URL / window.SUPABASE_KEY di SETIAP file HTML.
  */
  
-const CACHE_NAME = 'sri-rejeki-v1.0.4';
+const CACHE_NAME = 'sri-rejeki-v1.0.3';
 const SUPABASE_ORIGIN = 'supabase.co';
 const CDN_ORIGINS = ['cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -113,7 +109,7 @@ async function cacheFirst(request) {
 // PENTING: cache:'no-store' supaya request ini benar-benar tembus ke
 // server tiap kali (skip cache HTTP browser/CDN), bukan cuma tembus
 // layer Cache Storage milik Service Worker ini saja. Tanpa ini, file
-// seperti owner.html/kasir.html bisa diam-diam disajikan dari cache
+// seperti config.js/owner.html bisa diam-diam disajikan dari cache
 // HTTP yang basi walau kode di sini sudah "coba network dulu".
 async function networkFirst(request) {
   try {
