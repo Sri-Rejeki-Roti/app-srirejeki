@@ -2267,6 +2267,17 @@ function svgIcon(name, size=16) {
   return s;
 }
 
+// Escape teks bebas (input pengguna) sebelum dirender lewat innerHTML/template string,
+// supaya karakter seperti <, >, ", ' tidak bisa dipakai untuk stored XSS.
+// Pakai fungsi ini untuk SEMUA field teks bebas (catatan, alasan, nama produk/pelanggan/cabang, dll)
+// sebelum ditaruh di dalam template `` yang di-assign ke .innerHTML.
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
 // ============ STATE ============
 let produkList = [];
 let kategoriList = [];
@@ -2351,17 +2362,18 @@ async function verifyMasterPassword() {
   }
   if (!password) { showMpkpErr('Password wajib diisi'); return; }
   try {
-    // maybeSingle() dipakai (bukan single()) supaya kalau row belum ada,
-    // ini return {data:null, error:null} alih-alih error — tidak stuck.
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'master_password').maybeSingle();
+    // Verifikasi lewat RPC (server-side, bandingkan hash) — bukan baca
+    // plaintext dari tabel settings. RPC return NULL kalau password belum
+    // pernah diatur sama sekali, beda dari FALSE (password salah).
+    const { data, error } = await sb.rpc('verify_setting_password', { p_key: 'master_password', p_input: password });
     if (error) { showMpkpErr('Gagal memverifikasi. Coba lagi.'); console.error(error); return; }
-    if (!data) {
-      // Row ternyata belum ada (mis. dihapus manual / race condition) -> alihkan ke mode setup.
+    if (data === null) {
+      // Password belum pernah diatur (mis. dihapus manual / race condition) -> alihkan ke mode setup.
       showToast('Password Master belum diatur. Silakan buat password baru.', 'warn');
       openMasterLogin();
       return;
     }
-    if (password === data.value) {
+    if (data === true) {
       errorEl.style.display = 'none';
       closeMasterLogin();
       showToast('✅ Akses Master Data diberikan', 'success');
@@ -2389,8 +2401,9 @@ async function setupMasterPasswordFirstTime() {
   const btn = document.getElementById('mlg-submit-btn');
   const oldHTML = btn.innerHTML; btn.disabled = true; btn.innerHTML = '⏳ Menyimpan...';
   try {
-    const { error } = await sb.from('settings').insert({ key: 'master_password', value: p1 });
+    const { data, error } = await sb.rpc('set_setting_password', { p_key: 'master_password', p_old: '', p_new: p1 });
     if (error) throw error;
+    if (!data) throw new Error('Gagal membuat password');
     isMasterSetupMode = false;
     closeMasterLogin();
     showToast('✅ Password Master Data berhasil dibuat & akses diberikan', 'success');
@@ -2429,7 +2442,7 @@ async function openMasterLogin() {
   modal.classList.add('open');
 
   try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', 'master_password').maybeSingle();
+    const { data, error } = await sb.rpc('setting_password_exists', { p_key: 'master_password' });
     if (!error && !data) {
       // Belum ada row master_password sama sekali -> ini kondisi "mulai dari 0".
       isMasterSetupMode = true;
@@ -2471,17 +2484,12 @@ async function saveSettingPassword(type) {
   const btn = document.getElementById(`btn-setp-${type}`);
   const oldHTML = btn.innerHTML; btn.disabled = true; btn.innerHTML = '⏳ Menyimpan...';
   try {
-    const { data, error } = await sb.from('settings').select('value').eq('key', key).maybeSingle();
-    if (error) { showErr(`Gagal memverifikasi password ${label} lama`); return; }
-    if (!data) {
-      // Belum ada password ${label} tersimpan di database ini -> buat baru (skip cek password lama)
-      const { error: insertError } = await sb.from('settings').insert({ key, value: passwordBaru });
-      if (insertError) throw insertError;
-    } else {
-      if (data.value !== passwordLama) { showErr('Password lama salah'); elLama.value = ''; elLama.focus(); return; }
-      const { error: updateError } = await sb.from('settings').update({ value: passwordBaru }).eq('key', key);
-      if (updateError) throw updateError;
-    }
+    // set_setting_password menangani kedua kasus di server:
+    // - belum ada password tersimpan -> buat baru (skip cek password lama)
+    // - sudah ada -> cek passwordLama dulu (return FALSE kalau salah)
+    const { data: ok, error } = await sb.rpc('set_setting_password', { p_key: key, p_old: passwordLama, p_new: passwordBaru });
+    if (error) { showErr(`Gagal menyimpan password ${label}: ` + (error.message || 'Unknown error')); return; }
+    if (!ok) { showErr('Password lama salah'); elLama.value = ''; elLama.focus(); return; }
     showToast(`✅ Password ${label} berhasil diubah!`, 'success');
     elLama.value = ''; elBaru.value = ''; elKonfirmasi.value = '';
     if (type === 'master') {
@@ -3964,13 +3972,13 @@ function renderRetur() {
     const dt = new Date(r.created_at);
     const tgl = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
     const jam = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-    return `<tr><td><div style="font-weight:600;font-size:13px">${tgl}</div><div style="font-size:11px;color:var(--text-muted)">${jam}</div></td><td><span style="font-weight:600">${r.cabang?.nama || '—'}</span></td><td><span style="font-weight:600">${r.produk?.nama || '—'}</span></td><td><span class="badge badge-retur">- ${r.qty}</span></td><td><span style="font-size:13px;color:var(--text-muted)">${r.alasan}</span></td><td><span style="font-size:13px;color:var(--text-muted)">${r.catatan || '—'}</span></td><td style="text-align:center"><button class="act-btn del master-only" title="Hapus retur" onclick="konfirmHapusRetur(${r.id},${r.produk_id},${r.qty})" ${mDisp}>${svgIcon('trash',14)}</button></td></tr>`;
+    return `<tr><td><div style="font-weight:600;font-size:13px">${tgl}</div><div style="font-size:11px;color:var(--text-muted)">${jam}</div></td><td><span style="font-weight:600">${escapeHtml(r.cabang?.nama) || '—'}</span></td><td><span style="font-weight:600">${escapeHtml(r.produk?.nama) || '—'}</span></td><td><span class="badge badge-retur">- ${r.qty}</span></td><td><span style="font-size:13px;color:var(--text-muted)">${escapeHtml(r.alasan)}</span></td><td><span style="font-size:13px;color:var(--text-muted)">${escapeHtml(r.catatan) || '—'}</span></td><td style="text-align:center"><button class="act-btn del master-only" title="Hapus retur" onclick="konfirmHapusRetur(${r.id},${r.produk_id},${r.qty})" ${mDisp}>${svgIcon('trash',14)}</button></td></tr>`;
   }).join('');
   if (!cabangFilterId && returList.length > 1) {
     const totalQty = returList.reduce((sum, r) => sum + (r.qty || 0), 0);
     const perProduk = {};
     returList.forEach(r => { const nama = r.produk?.nama || '—'; perProduk[nama] = (perProduk[nama] || 0) + r.qty; });
-    const ringkasan = Object.entries(perProduk).map(([n, q]) => `${n}: ${q}`).join(', ');
+    const ringkasan = Object.entries(perProduk).map(([n, q]) => `${escapeHtml(n)}: ${q}`).join(', ');
     tbody.innerHTML += `<tr style="background:var(--primary-light);border-top:2px solid var(--primary)"><td colspan="3" style="font-weight:700;color:var(--primary-dark);font-size:13px;padding:10px 14px">🧮 TOTAL SEMUA CABANG</td><td><span class="badge badge-retur" style="font-size:13px;padding:4px 10px">- ${totalQty} pcs</span></td><td colspan="3" style="font-size:12px;color:var(--text-muted);font-weight:500">${ringkasan}</td></tr>`;
   }
 }
@@ -4407,10 +4415,10 @@ function renderPengambilan() {
     const dt = new Date(r.created_at);
     const tgl = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
     const jam = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-    const namaBahan = r.bahan_baku?.nama || 'Bahan dihapus';
-    const unitBahan = r.bahan_baku?.unit || '';
-    const namaPegawai = r.pegawai?.nama || '—';
-    return `<tr><td><div style="font-weight:600;font-size:13px">${tgl}</div><div style="font-size:11px;color:var(--text-muted)">${jam}</div></td><td><span style="font-weight:600">${namaBahan}</span></td><td><span class="badge badge-stok-habis">- ${r.jumlah} ${unitBahan}</span></td><td><span style="font-weight:600">${namaPegawai}</span></td><td><span style="font-size:13px;color:var(--text-muted)">${r.catatan || '—'}</span></td><td style="text-align:center"><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapusPengambilan(${r.id},${r.bahan_id},${r.jumlah})" ${mDisp}>${svgIcon('trash',14)}</button></td></tr>`;
+    const namaBahan = escapeHtml(r.bahan_baku?.nama) || 'Bahan dihapus';
+    const unitBahan = escapeHtml(r.bahan_baku?.unit);
+    const namaPegawai = escapeHtml(r.pegawai?.nama) || '—';
+    return `<tr><td><div style="font-weight:600;font-size:13px">${tgl}</div><div style="font-size:11px;color:var(--text-muted)">${jam}</div></td><td><span style="font-weight:600">${namaBahan}</span></td><td><span class="badge badge-stok-habis">- ${r.jumlah} ${unitBahan}</span></td><td><span style="font-weight:600">${namaPegawai}</span></td><td><span style="font-size:13px;color:var(--text-muted)">${escapeHtml(r.catatan) || '—'}</span></td><td style="text-align:center"><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapusPengambilan(${r.id},${r.bahan_id},${r.jumlah})" ${mDisp}>${svgIcon('trash',14)}</button></td></tr>`;
   }).join('');
 }
 function konfirmHapusPengambilan(id, bahanId, jumlah) {
