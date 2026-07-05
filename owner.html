@@ -650,6 +650,9 @@ body { padding-bottom: 0; }
   opacity:0; transition:all 0.25s; z-index:999; pointer-events:none; white-space:nowrap;
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--success); }
+.toast.error { background:var(--danger); }
+.toast.warn { background:var(--accent-dark); }
 
 /* TAB PANELS */
 /* tab-panel managed below */
@@ -1917,41 +1920,6 @@ async function setOwnerPayrollPill(pill, el) {
   }
 }
 
-async function setPayrollPeriodDefault() {
-  try {
-    _ownerPayrollSettings = await getPayrollSettings();
-    const { from, to, label } = getOwnerPayrollRange(currentOwnerPayrollPill, _ownerPayrollSettings);
-    document.getElementById('pr-date-from').value = from;
-    document.getElementById('pr-date-to').value = to;
-    const labelEl = document.getElementById('pr-periode-label');
-    if (labelEl) labelEl.textContent = label;
-    // Update pill labels (Mingguan vs Bulanan)
-    const isMingguan = (_ownerPayrollSettings.periode_gaji || 'mingguan') === 'mingguan';
-    const iniEl = document.getElementById('pr-pill-ini');
-    const laluEl = document.getElementById('pr-pill-lalu');
-    if (iniEl) iniEl.textContent = isMingguan ? 'Periode Ini' : 'Bulan Ini';
-    if (laluEl) laluEl.textContent = isMingguan ? 'Periode Lalu' : 'Bulan Lalu';
-  } catch (e) {
-    const today = toISODate(new Date());
-    document.getElementById('pr-date-from').value = today;
-    document.getElementById('pr-date-to').value = today;
-  }
-}
-
-// Reload data payroll secara independen, dipicu dari periode khusus di tab Payroll
-async function reloadPayrollPeriod() {
-  const from = document.getElementById('pr-date-from').value;
-  const to = document.getElementById('pr-date-to').value;
-  if (!from || !to) return;
-  try {
-    await loadPayroll(from, to);
-    renderPayroll();
-  } catch (e) {
-    console.error(e);
-    showToast('Gagal memuat data payroll: ' + (e.message || e), 'error');
-  }
-}
-
 // ============================================================
 // GENERIC CUSTOM DROPDOWN
 // ============================================================
@@ -2290,6 +2258,14 @@ function renderRekapPelanggan() {
 // pilihan Hari ini / 7 Hari / Bulan ini / Tahun ini)
 // ============================================================
 async function loadOmsetSepanjangWaktu() {
+  // EFISIENSI: hitung SUM di sisi database via RPC, bukan download semua baris transaksi.
+  const { data, error } = await sb.rpc('get_omset_sepanjang_waktu');
+  if (!error) {
+    omsetSepanjangWaktu = Number(data) || 0;
+    return;
+  }
+  // Fallback (mis. RPC belum dibuat di database ini): cara lama, download semua & jumlah di browser.
+  console.error('RPC get_omset_sepanjang_waktu gagal, fallback ke pagination:', error);
   const trx = await fetchAllPaginated(() =>
     sb.from('transaksi').select('id, total, status').order('id', { ascending: true })
   );
@@ -2388,7 +2364,9 @@ function renderRingkasan() {
     let totalCost = 0;
     trxList.forEach(t => {
       (t.transaksi_item || []).forEach(it => {
-        const hpp = hppMap[it.produk_id];
+        // Prioritaskan snapshot HPP saat transaksi (immutable); fallback ke HPP
+        // produk saat ini hanya untuk transaksi lama sebelum kolom snapshot ada.
+        const hpp = (it.hpp != null && it.hpp !== 0) ? it.hpp : hppMap[it.produk_id];
         if (!hpp) adaProdukTanpaHpp = true;
         totalCost += (it.qty || 0) * (hpp || 0);
       });
@@ -2570,7 +2548,9 @@ function renderProduk() {
         else if (!salesMap[id].nama) salesMap[id].nama = nama; // isi jika sebelumnya undefined
         const qty = item.qty || 0;
         const subtotal = item.subtotal || (qty * (item.harga || 0));
-        const hpp = hppMap[id] || 0;
+        // Prioritaskan snapshot HPP saat transaksi (immutable); fallback ke HPP
+        // produk saat ini hanya untuk transaksi lama sebelum kolom snapshot ada.
+        const hpp = (item.hpp != null && item.hpp !== 0) ? item.hpp : (hppMap[id] || 0);
         salesMap[id].qty   += qty;
         salesMap[id].omset += subtotal;
         // BUG FIX: laba = subtotal (harga jual aktual) - HPP × qty
