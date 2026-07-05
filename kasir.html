@@ -2815,18 +2815,78 @@ function showToast(msg, type) {
 // init() sekarang dipanggil dari unlockGate() setelah login password berhasil
 </script>
 
-<!-- ── SERVICE WORKER REGISTRATION (offline support) ── -->
+<!-- ── SERVICE WORKER: REGISTRASI + AUTO-UPDATE PWA ── -->
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Deteksi base path otomatis — aman untuk GitHub Pages subfolder
-    const swUrl = new URL('sw.js', document.baseURI).href;
-    const scope = new URL('./', document.baseURI).href;
-    navigator.serviceWorker.register(swUrl, { scope })
-      .then(reg => console.log('[SW] Terdaftar:', reg.scope))
-      .catch(err => console.warn('[SW] Gagal daftar:', err));
+(function () {
+  if (!('serviceWorker' in navigator)) return;
+
+  const swUrl = new URL('sw.js', document.baseURI).href;
+  const scope = new URL('./', document.baseURI).href;
+  let reloading = false; // guard anti reload-loop
+
+  // Tampilkan popup "Versi baru tersedia" + tombol "Update Sekarang"
+  function showUpdatePopup(onConfirm) {
+    if (document.getElementById('sw-update-toast')) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'sw-update-toast';
+    wrap.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);' +
+      'z-index:999999;background:#0f172a;color:#fff;padding:14px 16px;border-radius:14px;' +
+      'box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;align-items:center;gap:12px;' +
+      'font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:14px;' +
+      'max-width:92vw;box-sizing:border-box;';
+    wrap.innerHTML =
+      '<span style="white-space:nowrap;">🔄 Versi baru tersedia</span>' +
+      '<button id="sw-update-btn" style="background:#0f9b8e;color:#fff;border:none;' +
+      'padding:8px 14px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;' +
+      'white-space:nowrap;">Update Sekarang</button>';
+    document.body.appendChild(wrap);
+    document.getElementById('sw-update-btn').addEventListener('click', function () {
+      this.textContent = 'Memperbarui…';
+      this.disabled = true;
+      onConfirm();
+    });
+  }
+
+  navigator.serviceWorker.register(swUrl, { scope: scope, updateViaCache: 'none' })
+    .then(reg => {
+      console.log('[SW] Terdaftar:', reg.scope);
+
+      // Cek update setiap kali halaman dibuka/dimuat
+      reg.update().catch(() => {});
+
+      // Cek ulang saat tab kembali aktif (misal dibuka lagi dari home screen PWA)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      });
+
+      // Kalau service worker baru sedang diinstal, pantau statusnya
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // Versi baru sudah siap & menunggu (waiting) — tampilkan popup
+            showUpdatePopup(() => newWorker.postMessage({ type: 'SKIP_WAITING' }));
+          }
+        });
+      });
+
+      // Kalau ternyata sudah ada worker "waiting" saat register (mis. tab dibuka
+      // setelah update terjadi di tab lain)
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        showUpdatePopup(() => reg.waiting.postMessage({ type: 'SKIP_WAITING' }));
+      }
+    })
+    .catch(err => console.warn('[SW] Gagal daftar:', err));
+
+  // SW baru resmi mengambil alih kontrol → reload SATU KALI (anti-loop via flag `reloading`)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
   });
-}
+})();
 </script>
+
 </body>
 </html>
