@@ -1,136 +1,181 @@
-// File: supabase/functions/send-stock-alert/index.ts
+// supabase/functions/send-stock-alert/index.ts
+//
+// Edge Function untuk mengirim Web Push notifikasi saat stok produk menipis/habis.
+// Dipanggil oleh:
+//   1) Trigger database (via pg_net) begitu stok_cabang berkurang — real-time.
+//   2) Cron job terjadwal (mis. tiap 30 menit) — jaring pengaman tambahan.
+//
+// ENV / secrets yang WAJIB di-set di Supabase (Project Settings > Edge Functions > Secrets):
+//   VAPID_PUBLIC_KEY   -> harus SAMA PERSIS dengan VAPID_PUBLIC_KEY di config.js (client)
+//   VAPID_PRIVATE_KEY  -> pasangan private-nya, JANGAN taruh di file client manapun
+//   VAPID_SUBJECT      -> contoh: mailto:admin@srirejeki.com
+// SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY sudah otomatis tersedia di runtime Edge Function.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import webpush from "npm:web-push@3.6.7"; // Menggunakan modul NPM yang stabil
+import webpush from "npm:web-push@3.6.7";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Ambil secrets dari Supabase Dashboard
-// -> Edge Functions -> send-stock-alert -> Secrets
+// ---- Tipe data (menggantikan `any` supaya lolos deno-lint no-explicit-any) ----
+interface RequestBody {
+  produk_id?: number;
+}
+interface ProdukRow {
+  id: number;
+  nama: string;
+  stok_minimum: number | string | null;
+  aktif: boolean;
+}
+interface StokCabangRow {
+  produk_id: number;
+  cabang_id: number;
+  stok: number;
+}
+interface CabangRow {
+  id: number;
+  nama: string;
+}
+interface PushSubscriptionRow {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+interface NotifLogRow {
+  level: "menipis" | "habis";
+  notified_at: string;
+}
+// web-push melempar error dengan properti statusCode & body saat push gagal terkirim
+interface WebPushError extends Error {
+  statusCode?: number;
+}
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@srirejeki.com";
 
-// Ambang batas default kalau produk tidak punya stok_minimum sendiri
-const DEFAULT_LOW_STOCK_THRESHOLD = 10;
+webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-// Sama persis dengan logika isStokMenipis() di master.html — supaya
-// "Stok Menipis" konsisten di mana pun ditampilkan/dikirim.
-function isStokMenipis(stok: number, stokMinimum: number | null, cepatKadaluarsa: boolean | null) {
-  if (stok <= 0) return false; // dihitung terpisah sebagai "habis"
-  if (cepatKadaluarsa) return false; // dikecualikan, kecuali sudah 0
-  const ambang = (stokMinimum === null || stokMinimum === undefined) ? DEFAULT_LOW_STOCK_THRESHOLD : Number(stokMinimum);
-  return stok <= ambang;
-}
+// Berapa lama jeda sebelum produk+cabang+level yang sama boleh dinotifikasi lagi,
+// supaya tidak spam tiap kali cron/trigger jalan selagi stok masih di bawah ambang.
+const JEDA_NOTIF_JAM = 6;
 
-/**
- * Hapus subscription yang sudah tidak valid (404/410) dari database.
- */
-async function cleanupSubscription(endpoint: string, supabaseAdmin: SupabaseClient) {
-  await supabaseAdmin.from("push_subscriptions").delete().eq("endpoint", endpoint);
-  console.log(`Subscription kadaluarsa, dihapus: ${endpoint.slice(0, 40)}...`);
-}
-
-serve(async (_req: Request) => {
+Deno.serve(async (req) => {
   try {
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // Body opsional: { produk_id } kalau dipanggil dari trigger stok spesifik.
+    // Kalau kosong (dipanggil dari cron), cek SEMUA produk aktif.
+    let body: RequestBody = {};
+    try { body = await req.json(); } catch (_) { /* body kosong, dari cron */ }
 
-    // 1. Ambil SEMUA baris stok_cabang dari produk yang AKTIF beserta info
-    //    produk terkait (stok_minimum, cepat_kadaluarsa).
-    //    cepat_kadaluarsa) — filter "menipis/habis"-nya dilakukan di JS
-    //    karena ambangnya beda-beda per produk, tidak bisa difilter lewat .lte() saja.
-    const { data: allStok, error: stockError } = await supabaseAdmin
-      .from("stok_cabang")
-      .select(`
-        stok,
-        produk!inner ( id, nama, stok_minimum, cepat_kadaluarsa, aktif ),
-        cabang ( id, nama )
-      `)
-      .eq('produk.aktif', true); // Hanya cek produk yang aktif dijual
+    let produkQ = sb.from("produk").select("id, nama, stok_minimum, aktif").eq("aktif", true);
+    if (body.produk_id) produkQ = produkQ.eq("id", body.produk_id);
+    const { data: produkList, error: eProduk } = await produkQ.returns<ProdukRow[]>();
+    if (eProduk) throw eProduk;
+    if (!produkList || produkList.length === 0) {
+      return json({ ok: true, sent: 0, message: "Tidak ada produk relevan" });
+    }
 
-    if (stockError) throw stockError;
+    let stokQ = sb.from("stok_cabang").select("produk_id, cabang_id, stok");
+    if (body.produk_id) stokQ = stokQ.eq("produk_id", body.produk_id);
+    const { data: stokRows, error: eStok } = await stokQ.returns<StokCabangRow[]>();
+    if (eStok) throw eStok;
 
-    const habisRows = (allStok || []).filter((r: any) => (r.stok ?? 0) <= 0);
-    const menipisRows = (allStok || []).filter((r: any) =>
-      isStokMenipis(r.stok ?? 0, r.produk?.stok_minimum ?? null, r.produk?.cepat_kadaluarsa ?? false)
+    const { data: cabangList } = await sb.from("cabang").select("id, nama").returns<CabangRow[]>();
+    const cabangMap: Record<number, string> = Object.fromEntries((cabangList || []).map((c) => [c.id, c.nama]));
+
+    // Kumpulkan item yang stoknya menipis/habis, per kombinasi produk+cabang
+    type LowItem = { produk_id: number; cabang_id: number; nama: string; cabang: string; stok: number; level: "habis" | "menipis" };
+    const lowItems: LowItem[] = [];
+    for (const row of stokRows || []) {
+      const p = produkList.find((x) => x.id === row.produk_id);
+      if (!p) continue;
+      const ambang = p.stok_minimum != null && p.stok_minimum !== "" ? Number(p.stok_minimum) : 10;
+      if (row.stok <= 0) {
+        lowItems.push({ produk_id: row.produk_id, cabang_id: row.cabang_id, nama: p.nama, cabang: cabangMap[row.cabang_id] || "-", stok: row.stok, level: "habis" });
+      } else if (row.stok <= ambang) {
+        lowItems.push({ produk_id: row.produk_id, cabang_id: row.cabang_id, nama: p.nama, cabang: cabangMap[row.cabang_id] || "-", stok: row.stok, level: "menipis" });
+      }
+    }
+    if (lowItems.length === 0) {
+      return json({ ok: true, sent: 0, message: "Tidak ada stok menipis/habis" });
+    }
+
+    // Anti-spam: skip item yang barusan (< JEDA_NOTIF_JAM jam lalu) sudah dinotifikasi
+    // dengan level yang sama.
+    const batasWaktu = new Date(Date.now() - JEDA_NOTIF_JAM * 60 * 60 * 1000).toISOString();
+    const toNotify: LowItem[] = [];
+    for (const item of lowItems) {
+      const { data: lastLog } = await sb
+        .from("stok_notif_log")
+        .select("level, notified_at")
+        .eq("produk_id", item.produk_id)
+        .eq("cabang_id", item.cabang_id)
+        .order("notified_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<NotifLogRow>();
+      const sudahDinotifBaruBaru = lastLog && lastLog.level === item.level && lastLog.notified_at > batasWaktu;
+      if (!sudahDinotifBaruBaru) toNotify.push(item);
+    }
+    if (toNotify.length === 0) {
+      return json({ ok: true, sent: 0, message: "Semua item sudah dinotifikasi baru-baru ini" });
+    }
+
+    // Susun isi notifikasi
+    const habisCount = toNotify.filter((i) => i.level === "habis").length;
+    const menipisCount = toNotify.filter((i) => i.level === "menipis").length;
+    const titleParts: string[] = [];
+    if (habisCount) titleParts.push(`${habisCount} produk habis`);
+    if (menipisCount) titleParts.push(`${menipisCount} stok menipis`);
+    const title = "⚠️ " + titleParts.join(" & ");
+    const contoh = toNotify.slice(0, 3).map((i) => `${i.nama} (${i.cabang})`).join(", ");
+    const bodyText = toNotify.length > 3 ? `${contoh}, +${toNotify.length - 3} lainnya` : contoh;
+    const payload = JSON.stringify({ title, body: bodyText, url: "/owner.html" });
+
+    // Kirim ke semua subscriber terdaftar
+    const { data: subs, error: eSubs } = await sb.from("push_subscriptions").select("*").returns<PushSubscriptionRow[]>();
+    if (eSubs) throw eSubs;
+
+    let sent = 0;
+    const expiredEndpoints: string[] = [];
+    await Promise.all(
+      (subs || []).map(async (s) => {
+        const subscription = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } };
+        try {
+          await webpush.sendNotification(subscription, payload);
+          sent++;
+        } catch (err) {
+          const wpErr = err as WebPushError;
+          if (wpErr.statusCode === 404 || wpErr.statusCode === 410) {
+            // Subscription sudah tidak valid (browser uninstall/expire) -> bersihkan
+            expiredEndpoints.push(s.endpoint);
+          } else {
+            console.error("Gagal kirim push ke", s.endpoint, wpErr.message);
+          }
+        }
+      })
+    );
+    if (expiredEndpoints.length) {
+      await sb.from("push_subscriptions").delete().in("endpoint", expiredEndpoints);
+    }
+
+    // Catat log supaya item yang sama tidak dikirim ulang dalam JEDA_NOTIF_JAM ke depan
+    await sb.from("stok_notif_log").insert(
+      toNotify.map((i) => ({
+        produk_id: i.produk_id,
+        cabang_id: i.cabang_id,
+        level: i.level,
+        notified_at: new Date().toISOString(),
+      }))
     );
 
-    if (habisRows.length === 0 && menipisRows.length === 0) {
-      console.log("Stok aman, tidak ada notifikasi yang dikirim.");
-      return new Response(JSON.stringify({ message: "Stok aman." }), {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    // 2. Ambil semua subscriber notifikasi dari tabel push_subscriptions
-    const { data: subscriptions, error: subsError } = await supabaseAdmin
-      .from("push_subscriptions")
-      .select("endpoint, subscription"); // Ambil seluruh object JSONB
-
-    if (subsError) throw subsError;
-    if (!subscriptions || subscriptions.length === 0) {
-      console.log("Tidak ada subscriber notifikasi.");
-      return new Response(JSON.stringify({ message: "Tidak ada subscriber." }), {
-        headers: { "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    // 3. Siapkan payload notifikasi
-    const describeRow = (r: any) => `${r.produk?.nama || "produk"} (${r.cabang?.nama || "-"})`;
-    const totalHabis = habisRows.length;
-    const totalMenipis = menipisRows.length;
-    const parts: string[] = [];
-    if (totalHabis > 0) parts.push(`${totalHabis} stok habis (contoh: ${describeRow(habisRows[0])})`);
-    if (totalMenipis > 0) parts.push(`${totalMenipis} stok menipis (contoh: ${describeRow(menipisRows[0])})`);
-    const bodyMessage = parts.join(" · ");
-
-    const payload = JSON.stringify({
-      title: "⚠️ Peringatan Stok",
-      body: bodyMessage,
-      url: "owner.html", // Halaman yang dibuka saat notifikasi diklik
-    });
-
-    // 4. Kirim notifikasi ke semua subscriber, buang subscription yang sudah
-    //    tidak valid lagi (404/410) supaya tabel push_subscriptions tetap bersih.
-    const pushPromises = subscriptions.map(async (sub: any) => {
-      // Pastikan subscription adalah objek yang valid
-      if (!sub.subscription || typeof sub.subscription !== 'object' || !sub.subscription.endpoint) {
-        return;
-      }
-      try {
-        await webpush.sendNotification(sub.subscription, payload, {
-          vapidDetails: {
-            subject: "mailto:admin@srirejeki.app",
-            publicKey: VAPID_PUBLIC_KEY,
-            privateKey: VAPID_PRIVATE_KEY,
-          },
-        });
-      } catch (err: any) {
-        const statusCode = err?.statusCode;
-        if (statusCode === 404 || statusCode === 410) {
-          await cleanupSubscription(sub.endpoint, supabaseAdmin);
-        } else {
-          console.error(`Gagal kirim ke ${sub.endpoint.slice(0, 40)}...`, err?.body || err);
-        }
-      }
-    });
-
-    await Promise.all(pushPromises);
-
-    console.log(`Notifikasi diproses untuk ${subscriptions.length} perangkat.`);
-    return new Response(JSON.stringify({ message: `Notifikasi diproses untuk ${subscriptions.length} perangkat.` }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
-
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("Error di Edge Function:", message);
-    return new Response(JSON.stringify({ error: message }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
+    return json({ ok: true, sent, items_notified: toNotify.length, expired_removed: expiredEndpoints.length });
+  } catch (err) {
+    console.error(err);
+    const message = err instanceof Error ? err.message : String(err);
+    return json({ ok: false, error: message }, 500);
   }
 });
+
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+}
