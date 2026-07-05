@@ -199,6 +199,7 @@ CREATE TABLE IF NOT EXISTS transaksi_item (
   produk_id      BIGINT REFERENCES produk(id) ON DELETE SET NULL,
   qty            NUMERIC NOT NULL DEFAULT 0,
   harga          NUMERIC NOT NULL DEFAULT 0,
+  hpp            NUMERIC NOT NULL DEFAULT 0, -- FIX: Simpan HPP saat transaksi
   subtotal       NUMERIC NOT NULL DEFAULT 0,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
