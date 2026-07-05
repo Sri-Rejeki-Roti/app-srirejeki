@@ -1130,6 +1130,14 @@ async function loginKasir() {
   closeLoginModal();
   document.body.classList.add('fade-out');
 
+  // Tandai bahwa tab ini baru saja login sukses untuk cabang ini, supaya
+  // kasir.html tidak minta password lagi (sessionStorage: hilang begitu
+  // tab ditutup, jadi tidak melemahkan proteksi kasir.html untuk URL
+  // yang dibuka langsung di tab/perangkat lain).
+  try {
+    sessionStorage.setItem('kasir_session_' + data.id, '1');
+  } catch (e) { /* abaikan kalau sessionStorage tidak tersedia */ }
+
   setTimeout(function () {
     window.location.href = 'kasir.html?cabang=' + data.id + '&nama=' + encodeURIComponent(data.nama);
   }, FADE_OUT_MS);
