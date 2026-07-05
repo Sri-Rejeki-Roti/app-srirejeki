@@ -1416,7 +1416,14 @@ document.addEventListener('DOMContentLoaded', function() {
   } catch (e) { /* abaikan kalau sessionStorage tidak tersedia */ }
 
   if (autoUnlocked) {
-    unlockGate();
+    // FIX: jangan panggil unlockGate() (yang memanggil init()) secara
+    // langsung di sini — di titik ini variabel const yang dideklarasikan
+    // BELAKANGAN di script yang sama (mis. ICONS) belum ter-inisialisasi
+    // (temporal dead zone), sehingga svgIcon()/mountStaticIcons() di
+    // dalam init() akan lempar ReferenceError dan loading macet di 0%.
+    // setTimeout(...,0) menunda pemanggilan sampai seluruh script selesai
+    // dieksekusi dulu, baru unlockGate()/init() dipanggil.
+    setTimeout(unlockGate, 0);
   } else {
     setTimeout(() => kgPassInput.focus(), 200);
   }
