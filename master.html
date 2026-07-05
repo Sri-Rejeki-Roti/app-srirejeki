@@ -14,6 +14,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1326,10 +1327,13 @@ svg.icon { display:block; flex-shrink:0; }
   <!-- TAB PRODUK -->
   <div class="tab-section active" id="sec-produk">
     <div class="stats-row" id="produk-stats"></div>
+    <div class="rkj-warning" id="produk-notif-banner" style="display:none"></div>
     <div class="sec-header">
       <div class="sec-title"><span id="sh-icon-produk"></span>PRODUK MASTER <small id="produk-total-label"></small></div>
-      <button class="btn-secondary" onclick="muatUlangProduk()" id="btn-produk-refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>Muat Ulang</button>
-      <button class="btn-add master-only" onclick="openModalProduk()" style="display:none"><span id="btn-add-produk-icon"></span> Tambah Produk</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="muatUlangProduk()" id="btn-produk-refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>Muat Ulang</button>
+        <button class="btn-add master-only" onclick="openModalProduk()" style="display:none"><span id="btn-add-produk-icon"></span> Tambah Produk</button>
+      </div>
     </div>
     <div class="controls-row">
       <div class="search-wrap"><span class="si" id="si-produk"></span><input type="text" placeholder="Cari produk..." id="search-produk" oninput="filterProduk()"></div>
@@ -1390,6 +1394,7 @@ svg.icon { display:block; flex-shrink:0; }
     <div class="sec-header">
       <div class="sec-title">📊 REKAP PENJUALAN <small id="rekapjual-total-label"></small></div>
       <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="exportRekapJualExcel()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9.5 12.5l5 5M14.5 12.5l-5 5"/></svg>Excel</button>
         <button class="btn-secondary" onclick="printRekapJual()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>
         <button class="btn-secondary" onclick="loadRekapJual()" id="btn-rekapjual-refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>Muat Ulang</button>
       </div>
@@ -1495,6 +1500,7 @@ svg.icon { display:block; flex-shrink:0; }
     <div class="sec-header">
       <div class="sec-title">📊 REKAP PELANGGAN <small id="rekap-period-label">Pilih periode</small></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="exportRekapPelangganExcel()" id="btn-rekap-excel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9.5 12.5l5 5M14.5 12.5l-5 5"/></svg>Excel</button>
         <button class="btn-secondary" onclick="window.print()" id="btn-rekap-print"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>
         <button class="btn-secondary" onclick="loadRekapPelanggan()" id="btn-rekap-refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>Muat Ulang</button>
       </div>
@@ -2066,6 +2072,11 @@ svg.icon { display:block; flex-shrink:0; }
           </div>
           <input type="hidden" id="fp-kategori" value="">
         </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group"><label>Ambang Stok Menipis</label><input type="number" id="fp-stok-minimum" min="0" step="1" placeholder="5"></div>
+          <div class="form-group"><label>&nbsp;</label><div class="toggle-wrap" style="height:46px;align-items:center"><label class="toggle"><input type="checkbox" id="fp-cepat-kadaluarsa"><span class="toggle-slider"></span></label><span style="font-size:13px;font-weight:600;color:var(--text-muted)">⏳ Cepat Kadaluarsa</span></div></div>
+        </div>
+        <div class="form-group" id="fp-kadaluarsa-hint" style="display:none"><div style="font-size:11.5px;color:#92400e;background:#fff8e6;border:1.5px solid #f5d999;border-radius:var(--radius-sm);padding:8px 12px">💡 Produk ini tidak akan muncul di peringatan "Stok Menipis" selama stoknya masih di atas 0 — cocok untuk produk basah/segar yang memang sengaja tidak distok banyak.</div></div>
         <div class="form-group"><label>Status</label><div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="fp-aktif" checked><span class="toggle-slider"></span></label><span id="fp-aktif-label" style="font-size:14px;font-weight:600;color:var(--success)">Aktif</span></div></div>
         <div class="modal-actions" style="margin-top:auto"><button class="btn-cancel" onclick="closeModalProduk()">Batal</button><button class="btn-save" id="btn-save-produk" onclick="saveProduk()"><span id="btn-save-produk-icon"></span>Simpan</button></div>
       </div>
@@ -2166,7 +2177,7 @@ svg.icon { display:block; flex-shrink:0; }
       <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">PASSWORD MASTER</label>
       <input type="password" id="master-password-input" placeholder="Masukkan password..."
         maxlength="4" inputmode="numeric" pattern="[0-9]*"
-        style="width:100%;height:46px;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-family:inherit;outline:none;transition:border-color 0.15s;letter-spacing:6px;text-align:center;"
+        style="width:100%;height:46px;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-family:inherit;outline:none;transition:border-color 0.15s;text-align:center;"
         oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value.length===4) submitMasterLoginGate();"
         onkeydown="if(event.key==='Enter') submitMasterLoginGate();"
         onfocus="this.style.borderColor='var(--primary)'"
@@ -2380,6 +2391,8 @@ async function verifyMasterPassword() {
       grantMasterAccess();
     } else {
       showMpkpErr('Password salah. Silakan coba lagi.');
+      input.value = '';
+      input.focus();
     }
   } catch(e) { showMpkpErr('Error: ' + (e.message || 'Unknown error')); console.error(e); }
 }
@@ -2842,12 +2855,6 @@ function toggleTabGroup(groupId, forceOpen) {
   if (forceOpen) { group.classList.add('open'); return; }
   group.classList.toggle('open');
 }
-function syncStokGroupCount() {
-  const a = parseInt(document.getElementById('count-stok').textContent) || 0;
-  const b = parseInt(document.getElementById('count-stoklog').textContent) || 0;
-  const el = document.getElementById('count-stok-group');
-  if (el) el.textContent = a + b;
-}
 
 function switchTab(name, btn) {
   resetAllTabFields();
@@ -2940,12 +2947,31 @@ async function loadProduk() {
   const pgEl = document.getElementById('count-produk-group');
   if (pgEl) pgEl.textContent = produkList.length;
 }
+// ============================================================
+// AMBANG STOK MENIPIS — PER PRODUK
+// Setiap produk punya ambang batas sendiri (stok_minimum, default 5).
+// Produk yang ditandai "Cepat Kadaluarsa" sengaja dikecualikan dari
+// peringatan stok menipis (karena stok sedikit itu memang strategi
+// supaya tidak basi/rugi) — KECUALI kalau benar-benar habis (stok<=0),
+// itu tetap penting untuk diketahui.
+// ============================================================
+function stokAmbang(p) {
+  const v = p && p.stok_minimum;
+  return (v === null || v === undefined || v === '') ? 5 : Number(v);
+}
+function isStokMenipis(p, stok) {
+  if (stok <= 0) return false; // dihitung sebagai "habis", bukan "menipis"
+  if (p && p.cepat_kadaluarsa) return false; // dikecualikan, kecuali sudah 0
+  return stok <= stokAmbang(p);
+}
+function produkById(id) { return produkList.find(p => String(p.id) === String(id)); }
+
 function renderProdukStats() {
   const stokMap = {};
   stokCabangAll.forEach(s => { if (!stokMap[s.produk_id]) stokMap[s.produk_id] = 0; stokMap[s.produk_id] += s.stok; });
   const totalStokGlobal = produkList.reduce((sum, p) => sum + (stokMap[p.id] || 0), 0);
   const habis = produkList.filter(p => (stokMap[p.id] || 0) <= 0).length;
-  const low = produkList.filter(p => (stokMap[p.id] || 0) > 0 && (stokMap[p.id] || 0) <= 5).length;
+  const low = produkList.filter(p => isStokMenipis(p, stokMap[p.id] || 0)).length;
   const aktif = produkList.filter(p => p.aktif).length;
   const belumHpp = produkList.filter(p => !p.hpp).length;
   document.getElementById('produk-stats').innerHTML = `
@@ -2957,6 +2983,37 @@ function renderProdukStats() {
     <div class="stat-card"><div class="sv" style="color:${belumHpp>0?'var(--danger)':'var(--success)'}">${belumHpp}</div><div class="sl">Belum Ada HPP</div></div>
   `;
   document.getElementById('produk-total-label').textContent = `(${produkList.length} produk)`;
+  renderProdukNotifBanner(stokMap);
+}
+
+// Banner peringatan di atas tab Produk Master — otomatis tampil kalau ada
+// produk stok menipis/habis, langsung terlihat begitu master.html dibuka.
+function renderProdukNotifBanner(stokMap) {
+  const banner = document.getElementById('produk-notif-banner');
+  if (!banner) return;
+  stokMap = stokMap || (() => { const m = {}; stokCabangAll.forEach(s => { if (!m[s.produk_id]) m[s.produk_id] = 0; m[s.produk_id] += s.stok; }); return m; })();
+  const habisList = produkList.filter(p => (stokMap[p.id] || 0) <= 0).map(p => p.nama);
+  const lowList = produkList.filter(p => isStokMenipis(p, stokMap[p.id] || 0)).map(p => p.nama);
+  if (!habisList.length && !lowList.length) { banner.style.display = 'none'; banner.innerHTML = ''; return; }
+  const ringkas = (arr) => arr.slice(0, 6).join(', ') + (arr.length > 6 ? ` +${arr.length - 6} lagi` : '');
+  const parts = [];
+  if (habisList.length) parts.push(`<b>${habisList.length} produk habis:</b> ${ringkas(habisList)}`);
+  if (lowList.length) parts.push(`<b>${lowList.length} produk stok menipis:</b> ${ringkas(lowList)}`);
+  banner.innerHTML = '⚠️ ' + parts.join(' &nbsp;|&nbsp; ');
+  banner.style.display = 'flex';
+}
+
+// Toast ringkas saat aplikasi pertama dibuka (dipanggil sekali dari init())
+function notifStokMenipisOnLoad() {
+  const stokMap = {};
+  stokCabangAll.forEach(s => { if (!stokMap[s.produk_id]) stokMap[s.produk_id] = 0; stokMap[s.produk_id] += s.stok; });
+  const habis = produkList.filter(p => (stokMap[p.id] || 0) <= 0).length;
+  const low = produkList.filter(p => isStokMenipis(p, stokMap[p.id] || 0)).length;
+  if (habis + low === 0) return;
+  const msg = [];
+  if (low) msg.push(`${low} stok menipis`);
+  if (habis) msg.push(`${habis} stok habis`);
+  showToast('🔔 ' + msg.join(', ') + ' — cek tab Produk Master', 'warn');
 }
 function filterProduk() {
   const q = document.getElementById('search-produk').value.toLowerCase();
@@ -2980,10 +3037,11 @@ function renderProduk(list) {
   tbody.innerHTML = list.map(p => {
     const totalStok = stokMap[p.id] || 0;
     const produkThumb = p.foto ? `<div class="produk-icon-mini" style="overflow:hidden;padding:0"><img src="${p.foto}" alt="${p.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>` : `<div class="produk-icon-mini" style="font-size:20px">${p.emoji || '🍞'}</div>`;
-    const stokBadge = totalStok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : totalStok <= 5 ? `<span class="badge badge-stok-low">⚠ ${totalStok}</span>` : `<span class="badge badge-stok-ok">${totalStok}</span>`;
+    const stokBadge = totalStok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : isStokMenipis(p, totalStok) ? `<span class="badge badge-stok-low">⚠ ${totalStok}</span>` : `<span class="badge badge-stok-ok">${totalStok}</span>`;
+    const kadaluarsaTag = p.cepat_kadaluarsa ? `<span class="badge" style="background:#fff3d6;color:#92400e;font-size:10px;margin-left:6px;vertical-align:middle" title="Sengaja tidak distok banyak — dikecualikan dari peringatan stok menipis">⏳ Cepat Kadaluarsa</span>` : '';
     const margin = p.harga - (p.hpp || 0);
     const marginInfo = p.hpp ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">HPP Rp ${p.hpp.toLocaleString('id')} · <span style="color:${margin>=0?'var(--success)':'var(--danger)'};font-weight:700">${margin>=0?'+':''}Rp ${margin.toLocaleString('id')}</span></div>` : `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">⚠️ HPP belum diisi</div>`;
-    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
+    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}${kadaluarsaTag}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
   }).join('');
 }
 async function toggleAktif(id, isAktif) {
@@ -3006,6 +3064,9 @@ function openModalProduk() {
   document.getElementById('fp-aktif').checked = true;
   document.getElementById('fp-aktif-label').textContent = 'Aktif';
   document.getElementById('fp-aktif-label').style.color = 'var(--success)';
+  document.getElementById('fp-stok-minimum').value = 5;
+  document.getElementById('fp-cepat-kadaluarsa').checked = false;
+  document.getElementById('fp-kadaluarsa-hint').style.display = 'none';
   selectedEmoji = 'bread'; buildEmojiGrid(); resetFotoUI(); populateFpKategori();
   document.getElementById('modal-produk').classList.add('open');
   setTimeout(() => document.getElementById('fp-nama').focus(), 100);
@@ -3022,6 +3083,9 @@ function openEditProduk(id) {
   document.getElementById('fp-aktif').checked = p.aktif;
   document.getElementById('fp-aktif-label').textContent = p.aktif ? 'Aktif' : 'Non-aktif';
   document.getElementById('fp-aktif-label').style.color = p.aktif ? 'var(--success)' : 'var(--text-muted)';
+  document.getElementById('fp-stok-minimum').value = (p.stok_minimum != null ? p.stok_minimum : 5);
+  document.getElementById('fp-cepat-kadaluarsa').checked = !!p.cepat_kadaluarsa;
+  document.getElementById('fp-kadaluarsa-hint').style.display = p.cepat_kadaluarsa ? 'block' : 'none';
   const EMOJI_TO_KEY = {}; EMOJI_MAP.forEach(e => { EMOJI_TO_KEY[e.emoji] = e.key; });
   selectedEmoji = EMOJI_TO_KEY[p.emoji] || p.emoji || 'bread';
   buildEmojiGrid();
@@ -3040,6 +3104,9 @@ function populateFpKategori(selected) {
 document.getElementById('fp-aktif').addEventListener('change', function() {
   document.getElementById('fp-aktif-label').textContent = this.checked ? 'Aktif' : 'Non-aktif';
   document.getElementById('fp-aktif-label').style.color = this.checked ? 'var(--success)' : 'var(--text-muted)';
+});
+document.getElementById('fp-cepat-kadaluarsa').addEventListener('change', function() {
+  document.getElementById('fp-kadaluarsa-hint').style.display = this.checked ? 'block' : 'none';
 });
 function onFotoSelected(input) {
   const file = input.files[0];
@@ -3065,6 +3132,9 @@ async function saveProduk() {
   const hpp = fromRupiah(document.getElementById('fp-hpp').value);
   const kategori_id = document.getElementById('fp-kategori').value || null;
   const aktif = document.getElementById('fp-aktif').checked;
+  const stokMinimumRaw = parseInt(document.getElementById('fp-stok-minimum').value);
+  const stok_minimum = isNaN(stokMinimumRaw) || stokMinimumRaw < 0 ? 5 : stokMinimumRaw;
+  const cepat_kadaluarsa = document.getElementById('fp-cepat-kadaluarsa').checked;
   const emojiItem = EMOJI_MAP.find(e => e.key === selectedEmoji);
   const emoji = emojiItem ? emojiItem.emoji : '🍞';
   if (!nama) { showToast('Nama produk wajib diisi', 'warn'); return; }
@@ -3074,7 +3144,7 @@ async function saveProduk() {
   if (isDuplicate) { showToast(`Produk "${nama}" sudah ada`, 'warn'); const inp = document.getElementById('fp-nama'); inp.focus(); inp.select(); return; }
   const btn = document.getElementById('btn-save-produk'); btn.blur(); btn.disabled = true; btn.textContent = 'Menyimpan...';
   try {
-    const payload = { nama, harga, hpp, aktif, emoji, foto: selectedFotoBase64 };
+    const payload = { nama, harga, hpp, aktif, emoji, foto: selectedFotoBase64, stok_minimum, cepat_kadaluarsa };
     if (kategori_id) payload.kategori_id = kategori_id; else payload.kategori_id = null;
     if (id) { const { error } = await sb.from('produk').update(payload).eq('id', id); if (error) throw error; showToast('Produk berhasil diperbarui', 'success'); }
     else { const { error } = await sb.from('produk').insert(payload); if (error) throw error; showToast('Produk berhasil ditambahkan', 'success'); }
@@ -3093,8 +3163,6 @@ async function loadKategori() {
   populateFilterKategori();
   document.getElementById('count-kategori').textContent = kategoriList.length;
   document.getElementById('kategori-total-label').textContent = `(${kategoriList.length} kategori)`;
-  const kgEl = document.getElementById('count-kategori-group');
-  if (kgEl) kgEl.textContent = kategoriList.length;
 }
 function populateFilterKategori() {
   const options = [{ value:'', label:'Semua Kategori' }, ...kategoriList.map(k => ({ value:String(k.id), label:k.nama }))];
@@ -3414,6 +3482,7 @@ function mcPick(which, iso) {
 function mcSyncButtons() { ['dari','sampai'].forEach(which => { const iso = document.getElementById('rekap-' + which).value; const btn = document.getElementById('rekap-' + which + '-btn'); if (btn) btn.textContent = mcFormatDisplay(iso); }); }
 document.addEventListener('click', e => { if (!e.target.closest('.mini-cal-wrap')) { document.querySelectorAll('.mini-cal-pop.open').forEach(p => p.classList.remove('open')); } });
 
+let rekapPelRows = []; // cache hasil load Rekap Pelanggan (dipakai untuk export Excel)
 async function loadRekapPelanggan() {
   const dari = document.getElementById('rekap-dari').value;
   const sampai = document.getElementById('rekap-sampai').value;
@@ -3432,6 +3501,7 @@ async function loadRekapPelanggan() {
     const map = {};
     (data || []).forEach(t => { const pid = t.pelanggan_id; if (!map[pid]) map[pid] = { count: 0, total: 0 }; map[pid].count++; map[pid].total += (t.total || 0); });
     const rows = Object.entries(map).map(([pid, val]) => { const pel = pelangganList.find(p => String(p.id) === String(pid)); return { nama: pel ? pel.nama : `Pelanggan #${pid}`, ...val }; }).sort((a, b) => b.total - a.total);
+    rekapPelRows = rows;
     const totalTrx = rows.reduce((s, r) => s + r.count, 0);
     const totalNominal = rows.reduce((s, r) => s + r.total, 0);
     document.getElementById('rekap-sum-pelanggan').textContent = rows.length;
@@ -3448,8 +3518,33 @@ async function loadRekapPelanggan() {
   finally { clearTimeout(dimTimer); tbody.style.opacity = '1'; sumEl.style.opacity = '1'; if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.style.opacity = ''; } }
 }
 
+function exportRekapPelangganExcel() {
+  if (typeof XLSX === 'undefined') { showToast('Library Excel gagal dimuat, cek koneksi internet', 'error'); return; }
+  if (!rekapPelRows.length) { showToast('Belum ada data — klik Tampilkan dulu', 'warn'); return; }
+  const dari = document.getElementById('rekap-dari').value;
+  const sampai = document.getElementById('rekap-sampai').value;
+  const dataSheet = rekapPelRows.map((r, i) => ({
+    'No': i + 1,
+    'Nama Pelanggan': r.nama,
+    'Jumlah Transaksi': r.count,
+    'Total Nominal': r.total
+  }));
+  const totalTrx = rekapPelRows.reduce((s, r) => s + r.count, 0);
+  const totalNominal = rekapPelRows.reduce((s, r) => s + r.total, 0);
+  dataSheet.push({});
+  dataSheet.push({ 'No': '', 'Nama Pelanggan': 'TOTAL', 'Jumlah Transaksi': totalTrx, 'Total Nominal': totalNominal });
+  const ws = XLSX.utils.json_to_sheet(dataSheet);
+  ws['!cols'] = [{wch:6},{wch:26},{wch:18},{wch:18}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Pelanggan');
+  const label = (dari && sampai) ? `${dari}_sd_${sampai}` : new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Rekap_Pelanggan_${label}.xlsx`);
+  showToast('Rekap Pelanggan berhasil diekspor ke Excel', 'success');
+}
+
 // ============ REKAP PENJUALAN (per transaksi, tidak digabung) ============
 let rekapJualRows = []; // cache hasil load (sebelum filter nama)
+let rekapJualFiltered = []; // hasil setelah filter aktif (dipakai untuk export Excel)
 
 function setPeriodRekapJual(jenis) {
   const today = new Date();
@@ -3580,6 +3675,7 @@ function filterRekapJual() {
   let rows = rekapJualRows;
   if (q) rows = rows.filter(r => r.nama.toLowerCase().includes(q));
   if (cabangId) rows = rows.filter(r => String(r.cabang_id) === String(cabangId));
+  rekapJualFiltered = rows;
 
   const totalFilter = rows.reduce((s, r) => s + r.total, 0);
   const labaFilter = rows.reduce((s, r) => s + r.laba, 0);
@@ -3644,6 +3740,34 @@ function printRekapJual() {
   document.body.classList.remove('print-rekapjual');
 }
 
+function exportRekapJualExcel() {
+  if (typeof XLSX === 'undefined') { showToast('Library Excel gagal dimuat, cek koneksi internet', 'error'); return; }
+  const rows = rekapJualFiltered.length ? rekapJualFiltered : rekapJualRows;
+  if (!rows.length) { showToast('Tidak ada data untuk diekspor', 'warn'); return; }
+  const dataSheet = rows.map((r, i) => {
+    const dt = new Date(r.created_at);
+    return {
+      'No': i + 1,
+      'Nama (Umum/Pelanggan)': r.nama,
+      'Cabang': r.cabangNama,
+      'Total Transaksi': r.total,
+      'Laba Bersih': r.laba,
+      'Tanggal': `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`
+    };
+  });
+  const totalTrx = rows.reduce((s, r) => s + r.total, 0);
+  const totalLaba = rows.reduce((s, r) => s + r.laba, 0);
+  dataSheet.push({}); // baris kosong pemisah
+  dataSheet.push({ 'No': '', 'Nama (Umum/Pelanggan)': 'TOTAL', 'Cabang': '', 'Total Transaksi': totalTrx, 'Laba Bersih': totalLaba, 'Tanggal': '' });
+  const ws = XLSX.utils.json_to_sheet(dataSheet);
+  ws['!cols'] = [{wch:6},{wch:26},{wch:16},{wch:16},{wch:16},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Rekap Penjualan');
+  const tgl = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Rekap_Penjualan_${tgl}.xlsx`);
+  showToast('Rekap Penjualan berhasil diekspor ke Excel', 'success');
+}
+
 // ============ CABANG ============
 async function loadCabang() {
   const { data, error } = await sb.from('cabang').select('*').order('nama');
@@ -3675,7 +3799,7 @@ function renderCabang() {
   const grid = document.getElementById('grid-cabang');
   if (!cabangList.length) { grid.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:20px">Belum ada cabang. Tambahkan cabang pertama!</div>'; return; }
   const cabangStokMap = {};
-  stokCabangAll.forEach(s => { if (!cabangStokMap[s.cabang_id]) cabangStokMap[s.cabang_id] = { total: 0, count: 0, low: 0 }; cabangStokMap[s.cabang_id].total += s.stok; cabangStokMap[s.cabang_id].count++; if (s.stok <= 5) cabangStokMap[s.cabang_id].low++; });
+  stokCabangAll.forEach(s => { if (!cabangStokMap[s.cabang_id]) cabangStokMap[s.cabang_id] = { total: 0, count: 0, low: 0 }; cabangStokMap[s.cabang_id].total += s.stok; cabangStokMap[s.cabang_id].count++; if (isStokMenipis(produkById(s.produk_id), s.stok)) cabangStokMap[s.cabang_id].low++; });
   const mDisp = masterAuthorized ? '' : 'style="display:none"';
   grid.innerHTML = cabangList.map(c => {
     const info = cabangStokMap[c.id] || { total: 0, count: 0, low: 0 };
@@ -3727,10 +3851,9 @@ async function loadStokCabangAll() {
   const { data, error } = await sb.from('stok_cabang').select('*');
   if (error) { console.error(error); return; }
   stokCabangAll = data || [];
-  const lowCount = stokCabangAll.filter(s => s.stok > 0 && s.stok <= 5).length;
+  const lowCount = stokCabangAll.filter(s => isStokMenipis(produkById(s.produk_id), s.stok)).length;
   const habisCount = stokCabangAll.filter(s => s.stok <= 0).length;
   document.getElementById('count-stok').textContent = lowCount + habisCount;
-  syncStokGroupCount();
   renderCabang();
 }
 
@@ -3788,7 +3911,7 @@ async function loadStokCabang() {
     return { ...p, stok_cabang: stok, stok_id: stokEntry ? stokEntry.id : null, kategori_nama: p.kategori?.nama || '—' };
   }).filter(p => p.aktif);
   const totalStok = stokCabangList.reduce((sum, p) => sum + p.stok_cabang, 0);
-  const low = stokCabangList.filter(p => p.stok_cabang > 0 && p.stok_cabang <= 5).length;
+  const low = stokCabangList.filter(p => isStokMenipis(p, p.stok_cabang)).length;
   const habis = stokCabangList.filter(p => p.stok_cabang <= 0).length;
   document.getElementById('stok-summary-cards').innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap"><span class="badge badge-stok-ok" style="font-size:13px">Total: ${totalStok} pcs</span><span class="badge badge-stok-low" style="font-size:13px">⚠ Menipis: ${low}</span><span class="badge badge-stok-habis" style="font-size:13px">Habis: ${habis}</span></div>`;
   document.getElementById('stok-total-label').textContent = `(${stokCabangList.length} produk)`;
@@ -3801,7 +3924,7 @@ function renderStokCabang(list) {
   tbody.innerHTML = list.map(p => {
     const produkThumb = p.foto ? `<div class="produk-icon-mini" style="overflow:hidden;padding:0"><img src="${p.foto}" alt="${p.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>` : `<div class="produk-icon-mini" style="font-size:20px">${p.emoji || '🍞'}</div>`;
     const stok = p.stok_cabang || 0;
-    const stokBadge = stok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : stok <= 5 ? `<span class="badge badge-stok-low">⚠ ${stok}</span>` : `<span class="badge badge-stok-ok">${stok}</span>`;
+    const stokBadge = stok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : isStokMenipis(p, stok) ? `<span class="badge badge-stok-low">⚠ ${stok}</span>` : `<span class="badge badge-stok-ok">${stok}</span>`;
     const disabledAttr = masterAuthorized ? '' : 'disabled';
     const displayStyle = masterAuthorized ? '' : 'style="display:none"';
     return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori_nama}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span></td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="stok-input-cell master-only" ${displayStyle}><input type="number" id="stok-input-${p.id}" value="${stok}" min="0" step="1" ${disabledAttr}><button class="btn-stok-inline" onclick="updateStokCabang(${p.id})" ${disabledAttr}>Simpan</button></div><span class="master-only" ${displayStyle} style="font-size:11px;color:var(--text-muted)">🔒 Login untuk edit</span></td></tr>`;
@@ -3811,8 +3934,8 @@ function filterStokCabang() {
   const filter = document.getElementById('stok-filter-status').value;
   let list = stokCabangList;
   if (filter === 'habis') list = list.filter(p => p.stok_cabang <= 0);
-  else if (filter === 'low') list = list.filter(p => p.stok_cabang > 0 && p.stok_cabang <= 5);
-  else if (filter === 'ok') list = list.filter(p => p.stok_cabang > 5);
+  else if (filter === 'low') list = list.filter(p => isStokMenipis(p, p.stok_cabang));
+  else if (filter === 'ok') list = list.filter(p => p.stok_cabang > 0 && !isStokMenipis(p, p.stok_cabang));
   renderStokCabang(list);
 }
 async function updateStokCabang(produkId) {
@@ -3863,13 +3986,11 @@ async function loadStokLog() {
       else { tbody.innerHTML = `<tr class="empty-row"><td colspan="8">❌ Gagal memuat data: ${error.message}</td></tr>`; }
       document.getElementById('count-stoklog').textContent = '0';
       document.getElementById('stoklog-total-label').textContent = '(0 log)';
-      syncStokGroupCount();
       return;
     }
-    if (!data || !data.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Belum ada perubahan stok manual</td></tr>'; document.getElementById('count-stoklog').textContent = '0'; document.getElementById('stoklog-total-label').textContent = '(0 log)'; syncStokGroupCount(); return; }
+    if (!data || !data.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Belum ada perubahan stok manual</td></tr>'; document.getElementById('count-stoklog').textContent = '0'; document.getElementById('stoklog-total-label').textContent = '(0 log)'; return; }
     document.getElementById('count-stoklog').textContent = data.length;
     document.getElementById('stoklog-total-label').textContent = `(${data.length} log)`;
-    syncStokGroupCount();
     tbody.innerHTML = data.map(r => {
       const dt = new Date(r.created_at);
       const tglStr = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
@@ -4186,7 +4307,8 @@ function renderBahan(list) {
   if (!list.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Belum ada bahan baku</td></tr>'; return; }
   const mDisp = masterAuthorized ? '' : 'style="display:none"';
   tbody.innerHTML = list.map(b => {
-    const stokBadge = b.stok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : b.stok <= 5 ? `<span class="badge badge-stok-low">⚠ ${b.stok}</span>` : `<span class="badge badge-stok-ok">${b.stok}</span>`;
+    const bAmbang = (b.stok_minimum && b.stok_minimum > 0) ? b.stok_minimum : 5;
+    const stokBadge = b.stok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : b.stok <= bAmbang ? `<span class="badge badge-stok-low">⚠ ${b.stok}</span>` : `<span class="badge badge-stok-ok">${b.stok}</span>`;
     return `<tr><td><div class="produk-info"><div class="produk-icon-mini" style="font-size:20px">${b.emoji || '🧂'}</div><div><div class="produk-name">${b.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${b.unit || '—'}</span></td><td>${stokBadge}</td><td><span class="badge ${b.aktif !== false ? 'badge-aktif' : 'badge-nonaktif'}">${b.aktif !== false ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle" title="${b.aktif !== false ? 'Non-aktifkan' : 'Aktifkan'}" onclick="toggleAktifBahan(${b.id},${b.aktif !== false})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditBahan(${b.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapusBahan(${b.id},'${b.nama.replace(/'/g,"\\'")}')" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
   }).join('');
 }
@@ -4504,6 +4626,7 @@ async function init() {
     await new Promise(r => setTimeout(r, 400));
     hideLoading();
     setTimeout(() => { openMasterLogin(); }, 500);
+    setTimeout(() => { notifStokMenipisOnLoad(); }, 1200);
     autoDeleteDataLama();
     setupRealtimeStok();
   } catch(e) {
@@ -4618,7 +4741,7 @@ async function generateBackupSQL() {
     const TABLES = [
       { name: 'cabang',           cols: ['id','nama','password','aktif','created_at'] },
       { name: 'kategori',         cols: ['id','nama','created_at'] },
-      { name: 'produk',           cols: ['id','nama','harga','hpp','kategori_id','aktif','emoji','foto','satuan','created_at'] },
+      { name: 'produk',           cols: ['id','nama','harga','hpp','kategori_id','aktif','emoji','foto','satuan','stok_minimum','cepat_kadaluarsa','created_at'] },
       { name: 'stok_cabang',      cols: ['id','produk_id','cabang_id','stok','created_at'] },
       { name: 'pegawai',          cols: ['id','nama','bagian','jabatan','aktif','gaji_pokok','created_at'] },
       { name: 'bagian',           cols: ['id','nama','created_at'] },
