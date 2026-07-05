@@ -1,1 +1,43 @@
+# ============================================================
+# Cache & dependency folder - JANGAN pernah di-commit
+# ============================================================
+npm-cache/
+.npm-cache/
+node_modules/
+.npm-global/
+.npm/
+
+# ============================================================
+# File environment / secret - JANGAN pernah di-commit
+# (VAPID private key, service role key, dsb sebaiknya taruh di sini
+#  atau di Supabase Secrets, BUKAN di file yang ikut ke-push ke Git)
+# ============================================================
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# ============================================================
+# File sistem OS
+# ============================================================
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================================
+# Log & file sementara editor
+# ============================================================
+*.log
+npm-debug.log*
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================================
+# Supabase CLI local (kalau pakai `supabase start` lokal)
+# ============================================================
+supabase/.branches
+supabase/.temp
