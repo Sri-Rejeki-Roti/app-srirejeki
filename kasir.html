@@ -2159,12 +2159,24 @@ let isProcessing = false;
 
 // PROSES TRANSAKSI
 async function prosesTransaksi() {
-  if (isProcessing) return;
+  // FIX ANTI-DOBEL-TAP: kunci HARUS dipasang paling awal, sebelum await apapun.
+  // Sebelumnya isProcessing baru di-set true SETELAH `await loadNomor()`, yang
+  // merupakan network call ke Supabase (bisa 100-500ms). Selama jeda itu tombol
+  // masih aktif, jadi tap berkali-kali (double/triple tap) lolos dari guard ini
+  // dan menghasilkan beberapa transaksi identik tersimpan terpisah.
+  if (isProcessing || document.getElementById('btn-confirm').disabled) return;
+  isProcessing = true;
+  document.getElementById('btn-confirm').disabled = true;
+  document.getElementById('btn-confirm').innerHTML = 'Memproses...';
 
   // Validasi kredit wajib pilih pelanggan
   const pelangganId = document.getElementById('pelanggan-select').value || null;
   if (metodeBayar === 'kredit' && !pelangganId) {
-    showToast('Pilih pelanggan untuk transaksi kredit', 'warn'); return;
+    showToast('Pilih pelanggan untuk transaksi kredit', 'warn');
+    isProcessing = false;
+    document.getElementById('btn-confirm').disabled = false;
+    document.getElementById('btn-confirm').innerHTML = svgIcon('check',15) + 'Konfirmasi';
+    return;
   }
 
   // Ambil nomor urut terbaru dari server (fix race condition)
@@ -2176,11 +2188,13 @@ async function prosesTransaksi() {
   const kembalian = Math.max(0, bayar - totalFinal);
   const status = metodeBayar === 'kredit' ? 'kredit' : 'lunas';
 
-  if (metodeBayar === 'tunai' && bayar < totalFinal) { showToast('Uang kurang', 'warn'); return; }
-
-  isProcessing = true;
-  document.getElementById('btn-confirm').disabled = true;
-  document.getElementById('btn-confirm').innerHTML = 'Memproses...';
+  if (metodeBayar === 'tunai' && bayar < totalFinal) {
+    showToast('Uang kurang', 'warn');
+    isProcessing = false;
+    document.getElementById('btn-confirm').disabled = false;
+    document.getElementById('btn-confirm').innerHTML = svgIcon('check',15) + 'Konfirmasi';
+    return;
+  }
 
   try {
     // Cek apakah ada item override stok
