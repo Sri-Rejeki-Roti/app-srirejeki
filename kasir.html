@@ -452,6 +452,9 @@ svg.icon { display: block; flex-shrink: 0; }
   box-shadow: var(--shadow-pop);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.warn { background: var(--accent-dark); }
 
 /* NETWORK INDICATOR */
 .net-indicator {
@@ -737,6 +740,70 @@ svg.icon { display: block; flex-shrink: 0; }
 })();
 </script>
 
+<!-- ============================================================ -->
+<!-- LOGIN GATE: password cabang, sebelum akses kasir -->
+<!-- Mencegah akses langsung ke kasir.html?cabang=ID&nama=NAMA -->
+<!-- lewat URL tanpa lewat modal login di index.html. -->
+<!-- ============================================================ -->
+<style>
+#kasir-gate-overlay {
+  position:fixed;inset:0;z-index:999997;
+  background:linear-gradient(160deg,#e3f9f5 0%,#fef9ef 55%,#d0f5f0 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Inter',sans-serif;
+}
+.kg-card { width:100%;max-width:320px;padding:0 20px;text-align:center; }
+.kg-header {
+  background:linear-gradient(135deg,#0f9b8e,#0b756c);
+  border-radius:20px;padding:18px 24px 16px;
+  margin-bottom:22px;box-shadow:0 8px 24px rgba(15,155,142,0.35);
+}
+.kg-appname {
+  font-family:'Baloo 2',sans-serif;font-size:17px;font-weight:900;
+  color:#fff;letter-spacing:0.5px;text-transform:uppercase;
+}
+.kg-subtitle { font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px; }
+.kg-cabang-name {
+  font-size:14px;font-weight:700;color:#0b756c;margin-bottom:16px;
+}
+.kg-pass-input {
+  width:100%;padding:14px 16px;border:2px solid #ece4d3;border-radius:14px;
+  font-size:16px;font-weight:700;font-family:inherit;
+  box-sizing:border-box;outline:none;color:#2b2620;margin-bottom:12px;
+  text-align:center;letter-spacing:1px;
+}
+.kg-pass-input:focus { border-color:#0f9b8e; }
+#kg-error {
+  display:none;color:#e8485f;font-size:12px;font-weight:600;
+  text-align:center;margin:0 0 12px;padding:8px 12px;
+  background:#fdeaec;border-radius:10px;
+}
+.kg-submit-btn {
+  width:100%;padding:14px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,#0f9b8e,#0b756c);
+  color:#fff;font-size:15px;font-weight:800;cursor:pointer;
+  box-shadow:0 6px 20px rgba(15,155,142,0.35);
+  transition:opacity 0.15s;
+}
+.kg-submit-btn:active { opacity:0.85; }
+.kg-submit-btn:disabled { opacity:0.6;cursor:default; }
+.kg-back-link { margin-top:18px; }
+.kg-back-link a { font-size:12px;color:#8a8071;text-decoration:underline; }
+</style>
+
+<div id="kasir-gate-overlay">
+  <div class="kg-card">
+    <div class="kg-header">
+      <div class="kg-appname">Kasir</div>
+      <div class="kg-subtitle">Masukkan password cabang untuk masuk</div>
+    </div>
+    <div class="kg-cabang-name" id="kg-cabang-name"></div>
+    <input type="password" id="kg-pass-input" class="kg-pass-input" placeholder="Password cabang" maxlength="20" autocomplete="off" data-lpignore="true">
+    <div id="kg-error"></div>
+    <button class="kg-submit-btn" id="kg-submit-btn">Masuk</button>
+    <div class="kg-back-link"><a href="index.html">⬅ Kembali ke Menu</a></div>
+  </div>
+</div>
 
 <!-- LOADING SCREEN -->
 <div class="loading-screen" id="loading-screen">
@@ -1120,34 +1187,41 @@ async function renderPendingList() {
   }).join('');
 }
 
+let isSyncing = false;
 async function syncPendingNow() {
+  if (isSyncing) return;
   if (!navigator.onLine) {
     showToast('Masih offline, tidak bisa sync', 'warn'); return;
   }
+  isSyncing = true;
   const btn = document.getElementById('btn-sync-now');
   btn.disabled = true; btn.textContent = '⏳ Menyync...';
 
-  const items = await OQ.getAll();
-  let berhasil = 0, gagal = 0;
+  try {
+    const items = await OQ.getAll();
+    let berhasil = 0, gagal = 0;
 
-  for (const entry of items) {
-    const statusEl = document.getElementById('pis-' + entry.localId);
-    if (statusEl) { statusEl.className = 'pi-status syncing'; statusEl.textContent = '🔄 Menyync...'; }
-    try {
-      await pushTrxToSupabase(entry);
-      await OQ.remove(entry.localId);
-      berhasil++;
-      if (statusEl) { statusEl.className = 'pi-status done'; statusEl.textContent = '✅ Berhasil'; }
-    } catch(e) {
-      gagal++;
-      if (statusEl) { statusEl.className = 'pi-status error'; statusEl.textContent = '❌ Gagal: ' + e.message; }
+    for (const entry of items) {
+      const statusEl = document.getElementById('pis-' + entry.localId);
+      if (statusEl) { statusEl.className = 'pi-status syncing'; statusEl.textContent = '🔄 Menyync...'; }
+      try {
+        await pushTrxToSupabase(entry);
+        await OQ.remove(entry.localId);
+        berhasil++;
+        if (statusEl) { statusEl.className = 'pi-status done'; statusEl.textContent = '✅ Berhasil'; }
+      } catch(e) {
+        gagal++;
+        if (statusEl) { statusEl.className = 'pi-status error'; statusEl.textContent = '❌ Gagal: ' + e.message; }
+      }
     }
-  }
 
-  await refreshPendingBadge();
-  btn.disabled = false; btn.textContent = '🔄 Sync Sekarang';
-  if (berhasil) showToast(`${berhasil} transaksi berhasil disync`, 'success');
-  if (gagal)    showToast(`${gagal} transaksi gagal disync`, 'error');
+    await refreshPendingBadge();
+    if (berhasil) showToast(`${berhasil} transaksi berhasil disync`, 'success');
+    if (gagal)    showToast(`${gagal} transaksi gagal disync`, 'error');
+  } finally {
+    isSyncing = false;
+    btn.disabled = false; btn.textContent = '🔄 Sync Sekarang';
+  }
 }
 
 // ── Push satu entry ke Supabase ──────────────────────────────
@@ -1233,6 +1307,120 @@ document.addEventListener('DOMContentLoaded', function() {
     const taglineEl = document.getElementById('topbar-tagline');
     // tagline sudah statis, cabang-name sudah inline di dalamnya
 });
+
+// ============ LOGIN GATE: password cabang ============
+// Mencegah akses langsung ke kasir.html?cabang=ID&nama=NAMA lewat URL
+// tanpa lewat modal login password di index.html.
+(function(){
+  const kgOverlay = document.getElementById('kasir-gate-overlay');
+  const kgPassInput = document.getElementById('kg-pass-input');
+  const kgError = document.getElementById('kg-error');
+  const kgSubmitBtn = document.getElementById('kg-submit-btn');
+  const kgCabangNameEl = document.getElementById('kg-cabang-name');
+  let isAuthorized = false;
+
+  if (kgCabangNameEl) kgCabangNameEl.textContent = CABANG_NAMA;
+
+  function showGateError(msg) {
+    kgError.textContent = '⚠️ ' + msg;
+    kgError.style.display = 'block';
+  }
+  function hideGateError() { kgError.style.display = 'none'; }
+
+  function unlockGate() {
+    isAuthorized = true;
+    if (kgOverlay) kgOverlay.style.display = 'none';
+    if (typeof init === 'function') init();
+  }
+
+  // Kunci lagi HANYA jika aplikasi ditinggal cukup lama (bukan setiap kali
+  // fokus berpindah sekejap) — konsisten dengan master/owner/payroll.
+  const KG_RELOCK_AFTER_MS = 5 * 60 * 1000; // 5 menit
+  let kgHiddenAt = null;
+
+  function relockGate() {
+    if (!isAuthorized) return;
+    isAuthorized = false;
+    if (kgOverlay) {
+      kgOverlay.style.display = 'flex';
+      hideGateError();
+      kgPassInput.value = '';
+    }
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) {
+      kgHiddenAt = Date.now();
+    } else if (isAuthorized && kgHiddenAt) {
+      const elapsed = Date.now() - kgHiddenAt;
+      kgHiddenAt = null;
+      if (elapsed > KG_RELOCK_AFTER_MS) relockGate();
+    }
+  });
+  window.addEventListener('pagehide', relockGate);
+
+  async function handleGateSubmit() {
+    hideGateError();
+    const pass = (kgPassInput.value || '').trim().toUpperCase();
+    if (!pass) { showGateError('Masukkan password'); return; }
+    kgSubmitBtn.disabled = true;
+    try {
+      let ok = false;
+      if (navigator.onLine) {
+        const { data, error } = await sb.from('cabang').select('id')
+          .eq('id', CABANG_ID).eq('password', pass).single();
+        if (!error && data) {
+          ok = true;
+          // Simpan ke cache yang sama dipakai index.html, supaya konsisten
+          // untuk login offline berikutnya.
+          const pwCache = JSON.parse(localStorage.getItem('cabang_pw_cache') || '{}');
+          pwCache[CABANG_ID] = pass;
+          localStorage.setItem('cabang_pw_cache', JSON.stringify(pwCache));
+        }
+      } else {
+        // Offline: verifikasi dari cache yang sama dipakai index.html
+        const pwCache = JSON.parse(localStorage.getItem('cabang_pw_cache') || '{}');
+        const cachedPw = pwCache[CABANG_ID];
+        ok = !!cachedPw && cachedPw === pass;
+        if (!ok) showGateError('Password salah atau belum pernah login online di cabang ini');
+      }
+      if (!ok) {
+        if (navigator.onLine) showGateError('Password salah. Silakan coba lagi.');
+        kgPassInput.value = '';
+        kgPassInput.focus();
+        return;
+      }
+      unlockGate();
+    } catch(e) {
+      showGateError('Gagal memverifikasi: ' + (e.message || e));
+    } finally {
+      kgSubmitBtn.disabled = false;
+    }
+  }
+
+  kgSubmitBtn.addEventListener('click', handleGateSubmit);
+  kgPassInput.addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); handleGateSubmit(); }
+  });
+
+  // Auto-unlock kalau tab ini baru saja login sukses lewat index.html
+  // (ditandai sessionStorage saat itu juga) — supaya kasir tidak diminta
+  // password 2x. Flag ini per-tab (hilang saat tab ditutup) dan hanya
+  // dipakai sekali di awal, jadi URL yang dibuka langsung di tab/perangkat
+  // lain tetap wajib masukkan password.
+  let autoUnlocked = false;
+  try {
+    if (sessionStorage.getItem('kasir_session_' + CABANG_ID) === '1') {
+      sessionStorage.removeItem('kasir_session_' + CABANG_ID);
+      autoUnlocked = true;
+    }
+  } catch (e) { /* abaikan kalau sessionStorage tidak tersedia */ }
+
+  if (autoUnlocked) {
+    unlockGate();
+  } else {
+    setTimeout(() => kgPassInput.focus(), 200);
+  }
+})();
 
 // ============ ICON SYSTEM (SVG VECTOR, NO EMOJI) ============
 const ICONS = {
@@ -1663,8 +1851,8 @@ function handleUangTab(e) {
 function handleSearchEnter(e) {
   if (e.key === 'Tab') {
     e.preventDefault();
-    document.getElementById('uang-input').focus();
-    document.getElementById('uang-input').select();
+    document.getElementById('bayar-input').focus();
+    document.getElementById('bayar-input').select();
     return;
   }
   if (e.key !== 'Enter') return;
@@ -1876,7 +2064,7 @@ function handleBayarKey(e) {
     if (!btn.disabled) btn.click();
   }
   if (e.key === 'Tab') {
-    e.preventDefault();
+    handleUangTab(e);
   }
 }
 
@@ -2008,7 +2196,8 @@ async function prosesTransaksi() {
         produk_id: parseInt(id),
         nama_produk: item.nama, harga: item.harga,
         qty: item.qty, subtotal: item.harga * item.qty,
-        stok_override: isOverrideItem
+        stok_override: isOverrideItem,
+        hpp: p?.hpp || 0 // snapshot HPP saat transaksi, supaya laba historis immutable
       };
     });
 
@@ -2024,18 +2213,7 @@ async function prosesTransaksi() {
       }
 
       nomorUrut++;
-      closeModalBayar();
-      const printOtomatis = document.getElementById('chk-print').checked;
-      if (printOtomatis) {
-        printStrukLangsung(trxPayload, itemsPayload, bayar, kembalian);
-      }
-      cart = {}; renderCart(); selectPelanggan('');
-      tipeTransaksi = 'umum';
-      document.querySelectorAll('.tipe-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector('.tipe-btn')?.classList.add('active');
-      document.getElementById('pelanggan-row').classList.remove('show');
-      document.getElementById('pelanggan-diskon-badge').style.display = 'none';
-      renderProduk(produkList);
+      resetUIAfterTransaksi(document.getElementById('chk-print').checked, trxPayload, itemsPayload, bayar, kembalian);
       showToast('Tersimpan offline — akan disync saat online', 'warn');
 
     } else {
@@ -2067,18 +2245,7 @@ async function prosesTransaksi() {
         }
 
         nomorUrut++;
-        closeModalBayar();
-        const printOtomatis = document.getElementById('chk-print').checked;
-        if (printOtomatis) {
-          printStrukLangsung(trxPayload, itemsPayload, bayar, kembalian);
-        }
-        cart = {}; renderCart(); selectPelanggan('');
-        tipeTransaksi = 'umum';
-        document.querySelectorAll('.tipe-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('.tipe-btn')?.classList.add('active');
-        document.getElementById('pelanggan-row').classList.remove('show');
-        document.getElementById('pelanggan-diskon-badge').style.display = 'none';
-        renderProduk(produkList);
+        resetUIAfterTransaksi(document.getElementById('chk-print').checked, trxPayload, itemsPayload, bayar, kembalian);
         showToast('Koneksi bermasalah — transaksi disimpan offline, akan disync otomatis', 'warn');
         return;
       }
@@ -2141,18 +2308,7 @@ async function prosesTransaksi() {
       }
 
       nomorUrut++;
-      closeModalBayar();
-      const printOtomatis = document.getElementById('chk-print').checked;
-      if (printOtomatis) {
-        printStrukLangsung(trx, items, bayar, kembalian);
-      }
-      cart = {}; renderCart(); selectPelanggan('');
-      tipeTransaksi = 'umum';
-      document.querySelectorAll('.tipe-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector('.tipe-btn')?.classList.add('active');
-      document.getElementById('pelanggan-row').classList.remove('show');
-      document.getElementById('pelanggan-diskon-badge').style.display = 'none';
-      renderProduk(produkList);
+      resetUIAfterTransaksi(document.getElementById('chk-print').checked, trx, items, bayar, kembalian);
       showToast('Transaksi berhasil disimpan!', 'success');
     }
 
@@ -2167,13 +2323,19 @@ async function prosesTransaksi() {
 }
 
 // STRUK
-function tampilStruk(trx, items, bayar, kembalian) {
-  const now = new Date(trx.created_at || new Date());
-  // Panggil buatHtmlStruk dan bungkus dengan div .struk
-  const htmlContent = buatHtmlStruk(trx, items, bayar, kembalian);
-  const html = `<div class="struk">${htmlContent}</div>`;
-  document.getElementById('struk-content').innerHTML = html;
-  document.getElementById('modal-struk').classList.add('open');
+// Reset UI setelah transaksi berhasil disimpan (offline, fallback-gagal-online, atau online)
+function resetUIAfterTransaksi(printOtomatis, trxForStruk, itemsForStruk, bayar, kembalian) {
+  closeModalBayar();
+  if (printOtomatis) {
+    printStrukLangsung(trxForStruk, itemsForStruk, bayar, kembalian);
+  }
+  cart = {}; renderCart(); selectPelanggan('');
+  tipeTransaksi = 'umum';
+  document.querySelectorAll('.tipe-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.tipe-btn')?.classList.add('active');
+  document.getElementById('pelanggan-row').classList.remove('show');
+  document.getElementById('pelanggan-diskon-badge').style.display = 'none';
+  renderProduk(produkList);
 }
 
 function closeStruk() {
@@ -2361,16 +2523,6 @@ function printStruk() {
 }
 
 // RIWAYAT
-function formatTanggalDisplay(dateStr) {
-  const [y, m, d] = dateStr.split('-');
-  const nama = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-  const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-  const tgl = new Date(y, m-1, d);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const isToday = tgl.getTime() === today.getTime();
-  return isToday ? `Hari ini — ${d} ${bulan[m-1]} ${y}` : `${nama[tgl.getDay()]}, ${d} ${bulan[m-1]} ${y}`;
-}
-
 function updateDisplayTanggal() {
   const val = document.getElementById('filter-tanggal').value;
   const t = new Date();
@@ -2653,7 +2805,7 @@ function showToast(msg, type) {
 }
 
 // START
-init();
+// init() sekarang dipanggil dari unlockGate() setelah login password berhasil
 </script>
 
 <!-- ── SERVICE WORKER REGISTRATION (offline support) ── -->
