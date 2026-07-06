@@ -11,17 +11,6 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Payroll — Sri Rejeki</title>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    const swUrl = new URL('sw.js', document.baseURI).href;
-    const scope = new URL('./', document.baseURI).href;
-    navigator.serviceWorker.register(swUrl, { scope })
-      .then(reg => console.log('[SW] Terdaftar:', reg.scope))
-      .catch(err => console.warn('[SW] Gagal:', err));
-  });
-}
-</script>
 <script src="config.js"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
