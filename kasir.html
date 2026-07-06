@@ -2817,7 +2817,6 @@ async function lihatDetailTransaksi(id, nomor, total, waktu, tipe, metode, statu
     return;
   }
 
-  // Simpan untuk cetak ulang
   _detailTrxData = { id, nomor, total, waktu, tipe, metode, status, items: data };
   document.getElementById('btn-cetak-ulang').disabled = false;
 
