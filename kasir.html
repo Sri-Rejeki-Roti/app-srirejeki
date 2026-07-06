@@ -835,6 +835,7 @@ svg.icon { display: block; flex-shrink: 0; }
   </div>
   <button class="riwayat-btn" id="riwayat-btn" onclick="openRiwayat()"><span id="icon-history"></span>Riwayat</button>
   <button class="riwayat-btn" id="printer-btn" onclick="openModalPrinter()" title="Pilih Printer">🖨️ Printer</button>
+  <button class="riwayat-btn" id="notif-btn" onclick="aktifkanNotifikasi()" title="Aktifkan notifikasi stok menipis di browser ini">🔔 Notifikasi</button>
 </div>
   <!-- Network Indicator -->
   <div class="net-indicator online" id="net-indicator" title="Status jaringan: Online">
@@ -1079,6 +1080,61 @@ svg.icon { display: block; flex-shrink: 0; }
 
 <script>
 const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+
+// ════════════════════════════════════════════════════════════
+// PUSH NOTIFICATION (notifikasi stok menipis di browser)
+// ════════════════════════════════════════════════════════════
+const VAPID_PUBLIC_KEY = 'BO_k5OMbDE_HdQdnz35LoUakcRXz0AUJ1mO5Bux_ThUk5MPT5SzNor33gS--3Tg8NE2Ejh-hXSiyts7c6Qq069M';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function aktifkanNotifikasi() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    alert('Browser ini tidak mendukung notifikasi push.');
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      alert('Izin notifikasi tidak diberikan. Aktifkan lewat pengaturan browser jika ingin mencoba lagi.');
+      return;
+    }
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+
+    const json = sub.toJSON();
+    const { error } = await sb.from('push_subscriptions').upsert({
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth
+    }, { onConflict: 'endpoint' });
+
+    if (error) {
+      console.error('Gagal simpan subscription:', error);
+      alert('Notifikasi diizinkan browser, tapi gagal disimpan ke server: ' + error.message);
+      return;
+    }
+
+    alert('Notifikasi stok menipis berhasil diaktifkan di browser ini.');
+  } catch (err) {
+    console.error('Gagal aktifkan notifikasi:', err);
+    alert('Gagal mengaktifkan notifikasi: ' + err.message);
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 // OFFLINE QUEUE ENGINE
