@@ -1101,7 +1101,7 @@ async function aktifkanNotifikasi() {
     return;
   }
   try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
+    const reg = await navigator.serviceWorker.register('sw.js');
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
       alert('Izin notifikasi tidak diberikan. Aktifkan lewat pengaturan browser jika ingin mencoba lagi.');
