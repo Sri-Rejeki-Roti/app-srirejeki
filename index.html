@@ -1281,18 +1281,5 @@ document.addEventListener('visibilitychange', function () {
 
 </script>
 
-<!-- ── SERVICE WORKER REGISTRATION (offline support) ── -->
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Deteksi base path otomatis — aman untuk GitHub Pages subfolder
-    const swUrl = new URL('sw.js', document.baseURI).href;
-    const scope = new URL('./', document.baseURI).href;
-    navigator.serviceWorker.register(swUrl, { scope })
-      .then(reg => console.log('[SW] Terdaftar:', reg.scope))
-      .catch(err => console.warn('[SW] Gagal daftar:', err));
-  });
-}
-</script>
 </body>
 </html>
