@@ -4614,17 +4614,6 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ============ SERVICE WORKER ============
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    const swUrl = new URL('sw.js', document.baseURI).href;
-    const scope = new URL('./', document.baseURI).href;
-    navigator.serviceWorker.register(swUrl, { scope })
-      .then(reg => console.log('[SW] Terdaftar:', reg.scope))
-      .catch(err => console.warn('[SW] Gagal daftar:', err));
-  });
-}
-
 // ============ INIT ============
 async function init() {
   mountIcons();
