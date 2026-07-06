@@ -11,17 +11,6 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Owner — Sri Rejeki</title>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    const swUrl = new URL('sw.js', document.baseURI).href;
-    const scope = new URL('./', document.baseURI).href;
-    navigator.serviceWorker.register(swUrl, { scope })
-      .then(reg => console.log('[SW] Terdaftar:', reg.scope))
-      .catch(err => console.warn('[SW] Gagal:', err));
-  });
-}
-</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -91,18 +80,6 @@ svg.icon { display:block; flex-shrink:0; }
   transition: background 0.15s;
 }
 .topbar-back:hover { background:rgba(255,255,255,0.28); }
-.notif-bell-btn {
-  position:relative; display:flex; align-items:center; justify-content:center;
-  width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.18);
-  border:none; cursor:pointer; transition:background 0.15s; flex-shrink:0;
-}
-.notif-bell-btn:hover { background:rgba(255,255,255,0.28); }
-.notif-bell-btn.is-on { background:rgba(255,255,255,0.32); }
-.notif-bell-btn .dot {
-  position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%;
-  background:#ffd23f; display:none; box-shadow:0 0 0 2px #0c8478;
-}
-.notif-bell-btn.is-on .dot { display:block; }
 
 /* TABS NAV (BOTTOM NAVIGATION untuk mobile) */
 .tabs-nav {
@@ -1292,10 +1269,6 @@ body { padding-bottom: 0; }
     </div>
   </div>
   <div class="spacer"></div>
-  <button type="button" class="notif-bell-btn" id="notif-bell-btn" onclick="toggleNotifPush()" title="Notifikasi stok menipis">
-    <span class="dot" id="notif-bell-dot"></span>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3a6 6 0 00-6 6v3.2c0 .6-.2 1.2-.6 1.7L4 16h16l-1.4-2.1c-.4-.5-.6-1.1-.6-1.7V9a6 6 0 00-6-6z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 005 0" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
-  </button>
 <a href="index.html" class="topbar-back">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Dashboard
@@ -1561,105 +1534,6 @@ body { padding-bottom: 0; }
 
 <script>
 const sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
-
-// ============================================================
-// PUSH NOTIFICATION — Notifikasi Stok Menipis/Habis
-// ============================================================
-// GANTI dengan VAPID PUBLIC KEY hasil generate (lihat 03_deploy_instructions.md)
-const VAPID_PUBLIC_KEY = 'BOJApf074PGQjnhgC2FUMIlDXc1CO_3XEBKDG08SAeqqNqDWVW6CWt5efS7fdDzNuUAU5I0As0B1YDRtEoVFEOM';
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(base64);
-  const arr = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-  return arr;
-}
-
-function updateBellUI(isOn) {
-  const btn = document.getElementById('notif-bell-btn');
-  if (!btn) return;
-  btn.classList.toggle('is-on', !!isOn);
-  btn.title = isOn ? 'Notifikasi stok aktif (klik untuk matikan)' : 'Aktifkan notifikasi stok menipis';
-}
-
-async function checkNotifStatus() {
-  try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { updateBellUI(false); return; }
-    if (Notification.permission !== 'granted') { updateBellUI(false); return; }
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    updateBellUI(!!sub);
-  } catch (e) {
-    updateBellUI(false);
-  }
-}
-
-async function toggleNotifPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    showToast('Browser ini tidak mendukung notifikasi push', 'error');
-    return;
-  }
-
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const existing = await reg.pushManager.getSubscription();
-
-    if (existing) {
-      // Lagi aktif -> matikan
-      await sb.from('push_subscriptions').delete().eq('endpoint', existing.endpoint);
-      await existing.unsubscribe();
-      updateBellUI(false);
-      showToast('Notifikasi stok dimatikan', 'success');
-      return;
-    }
-
-    // Belum aktif -> minta izin & subscribe
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      showToast('Izin notifikasi ditolak', 'warn');
-      updateBellUI(false);
-      return;
-    }
-
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
-
-    const subJson = sub.toJSON();
-    const { error } = await sb.from('push_subscriptions').upsert({
-      endpoint: subJson.endpoint,
-      p256dh: subJson.keys.p256dh,
-      auth: subJson.keys.auth,
-      device_label: navigator.userAgent.slice(0, 120),
-    }, { onConflict: 'endpoint' });
-
-    if (error) throw error;
-
-    updateBellUI(true);
-    showToast('Notifikasi stok diaktifkan', 'success');
-  } catch (e) {
-    console.error(e);
-    showToast('Gagal mengatur notifikasi: ' + (e.message || e), 'error');
-    updateBellUI(false);
-  }
-}
-
-// Terima pesan dari sw.js kalau subscription di-renew otomatis oleh browser
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', async (event) => {
-    if (event.data?.type === 'PUSH_SUBSCRIPTION_RENEWED') {
-      const s = event.data.subscription;
-      await sb.from('push_subscriptions').upsert({
-        endpoint: s.endpoint, p256dh: s.keys.p256dh, auth: s.keys.auth,
-        device_label: navigator.userAgent.slice(0, 120),
-      }, { onConflict: 'endpoint' });
-    }
-  });
-}
-
 
 let allTrx = [];
 let trxOnlyPelanggan = false;
@@ -2722,7 +2596,6 @@ function hideLoadingScreen() {
 // ============================================================
 async function init() {
   initStaticGenericDropdowns();
-  checkNotifStatus();
   setPreset('today', document.querySelector('.preset-btn'), true);
   setProgress(10, 'Menghubungkan ke server...');
   try {
