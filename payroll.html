@@ -3514,7 +3514,7 @@ async function loadLembur() {
   
   function buildLemburQuery() {
     return sb.from('lembur')
-      .select('*, pegawai(nama, jabatan, gaji_harian, upah_lembur)')
+      .select('*, pegawai!pegawai_id(nama, jabatan, gaji_harian, upah_lembur)')
       .gte('tanggal', toStr(start))
       .lte('tanggal', toStr(end))
       .order('tanggal', { ascending: true })
@@ -3850,7 +3850,7 @@ async function loadRekap() {
       return q;
     }
     function buildLemburQueryRekap() {
-      let q = sb.from('lembur').select('*, pegawai(nama, jabatan, gaji_harian, upah_lembur)').gte('tanggal', from).lte('tanggal', to).order('id', { ascending: true });
+      let q = sb.from('lembur').select('*, pegawai!pegawai_id(nama, jabatan, gaji_harian, upah_lembur)').gte('tanggal', from).lte('tanggal', to).order('id', { ascending: true });
       if (pegawaiIds.length > 0) q = q.in('pegawai_id', pegawaiIds);
       return q;
     }
