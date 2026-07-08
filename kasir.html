@@ -510,6 +510,7 @@ svg.icon { display: block; flex-shrink: 0; }
   background: var(--card); border-radius: 20px;
   padding: 24px; width: 90%; max-width: 420px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  transition: height 0.2s ease;
 }
 .printer-modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
 .printer-modal-box p { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
@@ -545,7 +546,7 @@ svg.icon { display: block; flex-shrink: 0; }
 .printer-option:hover, .printer-option.highlighted { background: var(--primary-light); }
 .printer-option.selected { background: rgba(15,155,142,0.08); font-weight: 700; }
 .printer-option-empty { padding: 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
-.printer-status { font-size: 11px; margin-bottom: 14px; font-weight: 600; }
+.printer-status { font-size: 11px; margin-bottom: 14px; font-weight: 600; min-height: 32px; line-height: 1.5; transition: color 0.15s ease; }
 .printer-status.ok { color: var(--success); }
 .printer-status.err { color: var(--danger); }
 .printer-modal-actions { display: flex; gap: 8px; }
