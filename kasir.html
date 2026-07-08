@@ -1353,6 +1353,25 @@ document.addEventListener('DOMContentLoaded', function() {
   const kgSubmitBtn = document.getElementById('kg-submit-btn');
   const kgCabangNameEl = document.getElementById('kg-cabang-name');
   let isAuthorized = false;
+  let kgExpectedPass = null;
+  let kgAutoSubmitting = false;
+
+  async function preloadExpectedPassword() {
+    kgExpectedPass = null;
+    try {
+      if (navigator.onLine) {
+        const { data, error } = await sb.from('cabang').select('password').eq('id', CABANG_ID).single();
+        if (!error && data && data.password) {
+          kgExpectedPass = String(data.password).trim().toUpperCase();
+        }
+      } else {
+        const pwCache = JSON.parse(localStorage.getItem('cabang_pw_cache') || '{}');
+        const cachedPw = pwCache[CABANG_ID];
+        if (cachedPw) kgExpectedPass = String(cachedPw).trim().toUpperCase();
+      }
+    } catch(e) { /* diamkan, fallback ke tombol Masuk / tekan Enter */ }
+  }
+  preloadExpectedPassword();
 
   if (kgCabangNameEl) kgCabangNameEl.textContent = CABANG_NAMA;
 
@@ -1381,6 +1400,7 @@ document.addEventListener('DOMContentLoaded', function() {
       hideGateError();
       kgPassInput.value = '';
     }
+    preloadExpectedPassword();
   }
   document.addEventListener('visibilitychange', function(){
     if (document.hidden) {
@@ -1435,6 +1455,15 @@ document.addEventListener('DOMContentLoaded', function() {
   kgSubmitBtn.addEventListener('click', handleGateSubmit);
   kgPassInput.addEventListener('keydown', function(e){
     if (e.key === 'Enter') { e.preventDefault(); handleGateSubmit(); }
+  });
+  kgPassInput.addEventListener('input', function(){
+    if (kgAutoSubmitting) return;
+    const val = (kgPassInput.value || '').trim().toUpperCase();
+    if (kgExpectedPass && val.length === kgExpectedPass.length && val === kgExpectedPass) {
+      hideGateError();
+      kgAutoSubmitting = true;
+      handleGateSubmit().finally(function(){ kgAutoSubmitting = false; });
+    }
   });
 
   // Auto-unlock kalau tab ini baru saja login sukses lewat index.html
