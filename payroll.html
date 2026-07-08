@@ -3171,7 +3171,7 @@ function editPegawai(id) {
   const b = p.jabatan ? bagianList.find(x => x.nama === p.jabatan) : null;
   if (b) selectCustomOption('peg-bagian-select', b.id, b.nama, { gaji: b.gaji_harian, lembur: b.upah_lembur });
   else selectCustomOption('peg-bagian-select', '', '— Pilih Bagian —');
-  setRupiahInput('peg-gaji', p.gaji_harian || p.gaji_pokok || 0);
+  setRupiahInput('peg-gaji', p.gaji_pokok || 0);
   setRupiahInput('peg-lembur', p.upah_lembur || 0);
   selectCustomOption('peg-status', p.aktif !== false ? 'true' : 'false', p.aktif !== false ? 'Aktif' : 'Nonaktif');
   document.getElementById('peg-form-title').textContent = '✏️ Edit Pegawai';
@@ -3214,7 +3214,7 @@ async function simpanPegawai() {
   const payload = {
     nama: nama,
     jabatan: jabatan,
-    gaji_harian: gaji_harian,
+    gaji_pokok: gaji_harian,
     upah_lembur: upah_lembur,
     aktif: document.getElementById('peg-status').value === 'true',
     cabang_id: selectedCabangId // FIX: Sertakan cabang_id saat menyimpan
@@ -3896,7 +3896,7 @@ function renderRekap(absData, lemburData, from, to) {
     const totalJamLembur = lemburP.reduce((s, l) => s + (l.jam || 0), 0);
     const totalLemburRupiah = lemburP.reduce((s, l) => s + (l.jam || 0) * (l.upah_per_jam || l.pegawai?.upah_lembur || 0), 0);
 
-    const gajiHarian = p.gaji_harian || p.gaji_pokok || 0;
+    const gajiHarian = p.gaji_pokok || 0;
     const totalGajiPokok = gajiHarian * hadir;
     const total = totalGajiPokok + totalLemburRupiah;
     totalGajiAll += total;
