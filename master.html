@@ -19,7 +19,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { overflow-y: scroll; scrollbar-gutter: stable; }
+html {
+  overflow-y: scroll; scrollbar-gutter: stable;
+  background: #fef9ef;
+  overscroll-behavior-y: none;
+}
 :root {
   --primary: #0f9b8e;
   --primary-light: #e3f9f5;
@@ -48,6 +52,7 @@ body {
     radial-gradient(circle at 95% 85%, rgba(45,212,191,0.10) 0, transparent 40%);
   color: var(--text);
   min-height: 100vh;
+  overscroll-behavior-y: none;
 }
 h1,h2,h3,.display { font-family: 'Baloo 2','Inter',sans-serif; }
 svg.icon { display:block; flex-shrink:0; }
@@ -166,6 +171,8 @@ svg.icon { display:block; flex-shrink:0; }
 #tabs-nav .tab-group-btn .tab-count + .group-chevron { margin-left:auto; }
 
 .main-content { padding:24px 22px; max-width:1400px; margin:0 auto; }
+#main-default { padding-top:16px; padding-bottom:12px; }
+#sec-produk .tbl-wrap .empty-row td, #sec-restok .tbl-wrap .empty-row td { padding:16px !important; font-size:12px; }
 
 .subtabs-nav {
   display:flex; gap:4px; background:var(--bg, #f3f1ea); border:1.5px solid var(--border);
@@ -186,6 +193,18 @@ svg.icon { display:block; flex-shrink:0; }
 }
 .subtab-btn.active .subtab-count { background:rgba(255,255,255,0.28); }
 .subtab-btn:not(.active) .subtab-count { background:var(--border); color:var(--text-muted); }
+
+.subtab-mini-btn {
+  display:flex; align-items:center; gap:5px; padding:8px 14px; border-radius:9px; border:1.5px solid var(--border);
+  background:var(--card); color:var(--text); font-size:12.5px; font-weight:700; cursor:pointer;
+  font-family:inherit; white-space:nowrap; transition:border-color 0.15s, color 0.15s, background 0.15s;
+}
+.subtab-mini-btn:hover { border-color:var(--primary); color:var(--primary); }
+.subtab-mini-btn.primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color:white; border-color:transparent;
+}
+.subtab-mini-btn.primary:hover { opacity:0.92; color:white; }
+#sec-produk .subtab-mini-btn { padding:6px 11px; font-size:11.5px; }
 
 .sec-header {
   display:flex; align-items:center; justify-content:space-between;
@@ -216,6 +235,7 @@ svg.icon { display:block; flex-shrink:0; }
 
 .tbl-wrap { background:var(--card); border-radius:var(--radius); border:2px solid var(--border); overflow:hidden; box-shadow:var(--shadow-sm); }
 .tbl-wrap table { width:100%; border-collapse:collapse; }
+#produk-panel-master .tbl-wrap table, #produk-panel-stok .tbl-wrap table { table-layout:fixed; }
 .tbl-wrap thead tr { background:var(--primary-light); }
 .tbl-wrap thead th {
   padding:12px 16px; text-align:center; font-size:12px; font-weight:700;
@@ -259,8 +279,75 @@ svg.icon { display:block; flex-shrink:0; }
   display:flex; align-items:center; justify-content:center; color:var(--primary);
   flex-shrink:0;
 }
-.produk-info { display:flex; align-items:center; gap:10px; }
-.produk-name { font-weight:600; font-size:14px; }
+.produk-info { display:flex; align-items:center; gap:10px; text-align:left; max-width:190px; }
+.produk-name { font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Tabel Produk Master dibuat lebih ringkas agar 10 baris muat tanpa scroll */
+#produk-panel-master .tbl-wrap thead th { padding:9px 12px; }
+#produk-panel-master .tbl-wrap tbody td { padding:7px 12px; }
+#produk-panel-master .produk-info { max-width:170px; gap:8px; }
+#produk-panel-master .produk-icon-mini { width:30px; height:30px; border-radius:8px; }
+#produk-panel-master .produk-name { font-size:13px; }
+#produk-panel-master .price { font-size:13px; }
+
+/* Tabel Riwayat Restok disamakan tingginya dengan tabel Produk Master */
+#sec-restok .tbl-wrap thead th { padding:9px 12px; }
+#sec-restok .tbl-wrap tbody td { padding:7px 12px; }
+
+/* ===================================================================
+   TAMPILAN RINGKAS TANPA SCROLL — TAB PRODUK MASTER & PRODUK RESTOK
+   =================================================================== */
+#sec-produk .subtabs-nav { padding:3px; margin-bottom:8px; }
+#sec-produk .subtab-btn { padding:6px 10px; font-size:12px; }
+
+#sec-produk .stats-row, #sec-restok .stats-row { gap:6px; margin-bottom:8px; }
+#sec-produk .stat-card, #sec-restok .stat-card { padding:6px 8px; min-width:90px; }
+#sec-produk .stat-card .sv, #sec-restok .stat-card .sv { font-size:15px; }
+#sec-produk .stat-card .sl, #sec-restok .stat-card .sl { font-size:8.5px; margin-top:1px; }
+
+#sec-produk .sec-header, #sec-restok .sec-header { margin-bottom:6px; gap:6px; }
+#sec-produk .sec-title, #sec-restok .sec-title { font-size:14px; gap:5px; }
+#sec-produk .sec-title small, #sec-restok .sec-title small { font-size:10.5px; }
+
+#sec-produk .controls-row { gap:6px; margin-bottom:6px; }
+#sec-produk .search-wrap input,
+#sec-produk .custom-select-btn, #sec-restok .custom-select-btn,
+#sec-restok .flat-date { height:32px !important; font-size:12px !important; padding-top:6px; padding-bottom:6px; }
+#sec-produk .custom-select-btn, #sec-restok .custom-select-btn { padding:6px 30px 6px 10px !important; }
+#sec-produk .search-wrap input { padding-left:32px !important; }
+#sec-produk .search-wrap .si svg { width:13px; height:13px; }
+
+#sec-produk .btn-add, #sec-produk .btn-secondary, #sec-restok .btn-secondary { padding:6px 12px !important; font-size:12px !important; }
+
+#sec-produk .tbl-wrap thead th, #sec-restok .tbl-wrap thead th { padding:6px 10px !important; font-size:10.5px !important; }
+#sec-produk .tbl-wrap tbody td, #sec-restok .tbl-wrap tbody td { padding:6px 10px !important; font-size:12.5px !important; }
+
+#sec-produk .produk-icon-mini, #sec-restok .produk-icon-mini { width:24px; height:24px; border-radius:7px; }
+#sec-produk .produk-info, #sec-restok .produk-info { gap:7px; max-width:155px; }
+#sec-produk .produk-name, #sec-restok .produk-name { font-size:12.5px; }
+#sec-produk .price { font-size:12.5px; }
+
+#sec-produk .badge, #sec-restok .badge { padding:2px 8px; font-size:10px; }
+#sec-produk .act-btn, #sec-restok .act-btn { width:24px; height:24px; }
+#sec-produk .act-btn svg, #sec-restok .act-btn svg { width:12px; height:12px; }
+
+/* Samakan tinggi baris panel Produk Stok dengan panel Produk Master */
+#produk-panel-stok .tbl-wrap tbody td { padding:8px 10px !important; font-size:12.5px !important; }
+#produk-panel-stok .stok-input-cell { gap:5px; }
+#produk-panel-stok .stok-input-cell input[type="number"] { width:56px; padding:4px 6px; font-size:12px; height:28px; box-sizing:border-box; }
+#produk-panel-stok .btn-stok-inline { padding:5px 9px; font-size:11px; }
+#produk-panel-stok span[style*="font-size:13px"] { font-size:12px !important; }
+#produk-panel-stok span[style*="font-size:11px"] { display:none !important; }
+
+/* Ringkas panel Produk Stok biar muat 1 layar tanpa scroll */
+#produk-panel-stok .cabang-selector-bar { padding:16px 14px; margin-bottom:10px; }
+#produk-panel-stok .stok-summary-bar { margin-bottom:0; gap:6px; }
+#produk-panel-stok .stok-summary-bar > * { padding:4px 10px !important; font-size:11.5px !important; }
+#produk-panel-stok #stok-pagination { margin-top:6px !important; }
+#sec-produk .act-btns, #sec-restok .act-btns { gap:3px; }
+
+#produk-pagination, #restok-pagination, #stok-pagination { margin-top:6px !important; gap:4px !important; }
+#produk-pagination .btn-secondary, #restok-pagination .btn-secondary, #stok-pagination .btn-secondary { padding:3px 8px !important; font-size:10.5px !important; }
 
 .cards-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; }
 .cat-card {
@@ -923,12 +1010,12 @@ svg.icon { display:block; flex-shrink:0; }
   background: var(--card);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  min-height: 320px;
+  min-height: 160px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  padding: 20px;
+  padding: 10px;
   text-align: center;
   transition: all 0.3s ease;
   position: relative;
@@ -947,7 +1034,7 @@ svg.icon { display:block; flex-shrink:0; }
   width: 100%;
   height: 100%;
 }
-#restok-preview-empty svg { opacity:0.3; margin-bottom:12px; }
+#restok-preview-empty svg { opacity:0.3; margin-bottom:6px; width:32px; height:32px; }
 #restok-preview-content {
   display: none;
   width: 100%;
@@ -959,22 +1046,22 @@ svg.icon { display:block; flex-shrink:0; }
 }
 #restok-preview-content.show { display: flex !important; }
 #restok-preview-image {
-  width: 140px; height: 140px;
-  border-radius: 16px;
+  width: 64px; height: 64px;
+  border-radius: 12px;
   overflow: hidden;
   background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 56px;
+  font-size: 26px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-  margin-bottom: 16px;
+  margin-bottom: 6px;
   flex-shrink: 0;
 }
 #restok-preview-image img { width:100%; height:100%; object-fit:cover; }
-#restok-preview-name { font-size:20px; font-weight:800; color:var(--text); }
-#restok-preview-price { font-size:16px; font-weight:700; color:var(--primary-dark); }
-#restok-preview-stok { font-size:13px; color:var(--text-muted); margin-top:4px; }
+#restok-preview-name { font-size:14px; font-weight:800; color:var(--text); }
+#restok-preview-price { font-size:12px; font-weight:700; color:var(--primary-dark); }
+#restok-preview-stok { font-size:11px; color:var(--text-muted); margin-top:2px; }
 
 .print-only { display: none; }
 
@@ -1321,20 +1408,15 @@ svg.icon { display:block; flex-shrink:0; }
 <div class="main-content" id="main-default">
   <!-- TAB PRODUK -->
   <div class="tab-section active" id="sec-produk">
-    <div class="subtabs-nav">
+    <div class="subtabs-nav" id="produk-subtabs-nav">
       <button class="subtab-btn active" type="button" onclick="switchProdukSubtab('master',this)" id="produk-subtab-master-btn">Produk Master</button>
-      <button class="subtab-btn" type="button" onclick="switchProdukSubtab('stok',this)" id="produk-subtab-stok-btn">Produk Stok <span class="subtab-count" id="count-stok">0</span></button>
+      <button class="subtab-btn" type="button" onclick="switchProdukSubtab('stok',this)" id="produk-subtab-stok-btn">Produk Stok</button>
     </div>
     <div class="produk-subpanel" id="produk-panel-master">
-    <div class="stats-row" id="produk-stats"></div>
-    <div class="rkj-warning" id="produk-notif-banner" style="display:none"></div>
-    <div class="sec-header">
-      <div class="sec-title"><span id="sh-icon-produk"></span>PRODUK MASTER <small id="produk-total-label"></small></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn-secondary" onclick="muatUlangProduk()" id="btn-produk-refresh"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>Muat Ulang</button>
-        <button class="btn-add master-only" onclick="openModalProduk()" style="display:none"><span id="btn-add-produk-icon"></span> Tambah Produk</button>
-      </div>
+    <div class="sec-header" id="produk-master-header" style="display:none">
+      <div class="sec-title"><span id="sh-icon-produk"></span><small id="produk-total-label"></small></div>
     </div>
+    <div class="stats-row" id="produk-stats"></div>
     <div class="controls-row">
       <div class="search-wrap"><span class="si" id="si-produk"></span><input type="text" placeholder="Cari produk..." id="search-produk" oninput="filterProduk()"></div>
       <div class="custom-select-wrap" id="filter-kategori-produk-wrap">
@@ -1353,13 +1435,16 @@ svg.icon { display:block; flex-shrink:0; }
         <div class="custom-select-dropdown" id="filter-status-produk-dropdown" role="listbox"></div>
       </div>
       <input type="hidden" id="filter-status-produk" value="">
+      <button type="button" class="subtab-mini-btn" onclick="muatUlangProduk()" id="btn-produk-refresh"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>Muat Ulang</button>
+      <button type="button" class="subtab-mini-btn primary master-only" onclick="openModalProduk()" style="display:none"><span id="btn-add-produk-icon"></span>Tambah Produk</button>
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok</th><th style="width:130px">Status</th><th style="text-align:center;width:120px">Aksi</th></tr></thead>
-        <tbody id="tbl-produk"><tr class="empty-row"><td colspan="6">Memuat...</td></tr></tbody>
+        <thead><tr><th style="width:44px;text-align:center">No</th><th style="width:190px">Produk</th><th style="width:150px">Kategori</th><th style="width:150px">Harga</th><th style="width:170px">Stok</th><th style="width:130px">Status</th><th style="text-align:center;width:120px">Aksi</th></tr></thead>
+        <tbody id="tbl-produk"><tr class="empty-row"><td colspan="7">Memuat...</td></tr></tbody>
       </table>
     </div>
+    <div id="produk-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;flex-wrap:wrap"></div>
     </div>
     <div class="produk-subpanel" id="produk-panel-stok" style="display:none">
     <div class="cabang-selector-bar">
@@ -1376,7 +1461,7 @@ svg.icon { display:block; flex-shrink:0; }
       <div style="flex:1"></div>
       <div id="stok-summary-cards" class="stok-summary-bar"></div>
     </div>
-    <div class="sec-header">
+    <div class="sec-header" style="display:none">
       <div class="sec-title"><span id="sh-icon-stok"></span>PRODUK STOK <small id="stok-total-label"></small></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <div class="custom-select-wrap" id="stok-filter-status-wrap">
@@ -1391,10 +1476,11 @@ svg.icon { display:block; flex-shrink:0; }
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stok di Cabang</th><th style="width:130px">Status</th><th style="text-align:center;width:120px">Edit Stok</th></tr></thead>
-        <tbody id="tbl-stok-cabang"><tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr></tbody>
+        <thead><tr><th style="width:44px;text-align:center">No</th><th style="width:190px">Produk</th><th style="width:150px">Kategori</th><th style="width:150px">Harga</th><th style="width:170px">Stok di Cabang</th><th style="width:130px">Status</th><th style="text-align:center;width:120px">Edit Stok</th></tr></thead>
+        <tbody id="tbl-stok-cabang"><tr class="empty-row"><td colspan="7">Pilih cabang untuk melihat stok</td></tr></tbody>
       </table>
     </div>
+    <div id="stok-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;flex-wrap:wrap"></div>
     </div>
   </div>
 
@@ -1623,61 +1709,60 @@ svg.icon { display:block; flex-shrink:0; }
 
   <!-- TAB RESTOK -->
   <div class="tab-section" id="sec-restok">
-    <div class="retur-form-card">
-      <h3><span id="sh-icon-restok-form"></span>Tambah Stok / Restok</h3>
-      <div style="display:flex; gap:24px; align-items:stretch; flex-wrap:wrap">
+    <div class="retur-form-card" style="padding:10px 14px;margin-bottom:8px">
+      <h3 style="font-size:13px;margin-bottom:8px"><span id="sh-icon-restok-form"></span>Tambah Stok / Restok</h3>
+      <div style="display:flex; gap:14px; align-items:stretch; flex-wrap:wrap">
         <div style="flex:3; min-width:280px">
-          <div class="form-group"><label>Cabang *</label>
+          <div class="form-group"><label style="font-size:10px">Cabang *</label>
             <div class="custom-select-wrap" id="restokin-cabang-wrap">
-              <button type="button" class="custom-select-btn has-placeholder" id="restokin-cabang-btn" tabindex="1" onclick="toggleCabangDropdown('restokin')">
+              <button type="button" class="custom-select-btn has-placeholder" id="restokin-cabang-btn" tabindex="1" onclick="toggleCabangDropdown('restokin')" style="height:34px;padding:6px 32px 6px 10px;font-size:12px">
                 <span id="restokin-cabang-label">— Pilih Cabang —</span>
-                <svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg class="caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <div class="custom-select-dropdown" id="restokin-cabang-dropdown" role="listbox"></div>
             </div>
             <input type="hidden" id="restokin-cabang-value">
           </div>
-          <div class="form-group" style="margin-top:12px">
-            <label>Cari Produk *</label>
+          <div class="form-group" style="margin-top:6px">
+            <label style="font-size:10px">Cari Produk *</label>
             <div style="position:relative">
               <input type="text" id="restok-search-produk" placeholder="🔍 Ketik nama produk..." tabindex="2"
-                     style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:500;font-family:inherit;height:46px;box-sizing:border-box;background:white"
-                     oninput="filterRestokProduk()" onkeydown="if(event.key==='Enter') selectRestokProdukFirst()">
+                     style="width:100%;padding:6px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-weight:500;font-family:inherit;height:34px;box-sizing:border-box;background:white"
+                     oninput="filterRestokProduk()" onkeydown="handleRestokSearchKeydown(event)">
               <div id="restok-search-results" style="display:none;position:absolute;top:calc(100%+4px);left:0;right:0;background:white;border:2px solid var(--primary);border-radius:var(--radius-sm);max-height:200px;overflow-y:auto;z-index:50;box-shadow:var(--shadow-pop)"></div>
             </div>
           </div>
           <input type="hidden" id="restok-produk-id">
-          <div class="form-group" style="margin-top:12px;max-width:200px">
-            <label>Jumlah Tambah *</label>
-            <input type="number" id="restok-qty" min="1" value="1" tabindex="3" style="width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:18px;font-weight:700;font-family:inherit;height:46px;box-sizing:border-box" onfocus="this.value=''" onblur="if(this.value==='' || isNaN(parseInt(this.value)) || parseInt(this.value)<1) this.value='1';" onkeydown="if(event.key==='Enter'){ event.preventDefault(); document.getElementById('btn-restok-submit').focus(); }">
+          <div class="form-group" style="margin-top:6px;max-width:160px">
+            <label style="font-size:10px">Jumlah Tambah *</label>
+            <input type="number" id="restok-qty" min="1" value="0" tabindex="3" style="width:100%;padding:6px 10px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:700;font-family:inherit;height:34px;box-sizing:border-box" onfocus="this.value=''" onblur="if(this.value==='' || isNaN(parseInt(this.value)) || parseInt(this.value)<1) this.value='1';" onkeydown="if(event.key==='Enter'){ event.preventDefault(); document.getElementById('btn-restok-submit').focus(); }">
           </div>
-          <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-            <button class="btn-submit master-only" id="btn-restok-submit" tabindex="4" onclick="submitRestok()" style="display:none"><span id="btn-restok-icon"></span> Simpan Restok</button>
-            <div style="background:#e6f9ef;border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:600;color:var(--success);display:flex;align-items:center;gap:6px"><span id="restok-info-icon"></span>Stok akan <b>bertambah</b></div>
+          <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn-submit master-only" id="btn-restok-submit" tabindex="4" onclick="submitRestok()" style="display:none;width:100%;justify-content:center;height:34px;font-size:12px;padding:0 16px"><span id="btn-restok-icon"></span> Simpan Restok</button>
           </div>
         </div>
-        <div id="restok-preview-panel" style="flex:2; min-width:200px">
+        <div id="restok-preview-panel" style="flex:2; min-width:180px">
           <div id="restok-preview-empty">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <rect x="3" y="3" width="18" height="18" rx="3"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <path d="M21 15l-5-5L5 21"/>
             </svg>
-            <div style="font-weight:600;font-size:14px">Belum ada produk dipilih</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Cari dan pilih produk di sebelah kiri</div>
+            <div style="font-weight:600;font-size:12px">Belum ada produk dipilih</div>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">Cari dan pilih produk di sebelah kiri</div>
           </div>
           <div id="restok-preview-content">
             <div id="restok-preview-image"></div>
             <div id="restok-preview-name"></div>
             <div id="restok-preview-price"></div>
             <div id="restok-preview-stok"></div>
-            <button type="button" tabindex="-1" onclick="resetRestokProduk()" style="margin-top:10px;background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;font-weight:600;padding:4px 8px">✕ Batal pilih produk</button>
+            <button type="button" tabindex="-1" onclick="resetRestokProduk()" style="margin-top:6px;background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px;font-weight:600;padding:3px 6px">✕ Batal pilih produk</button>
           </div>
         </div>
       </div>
     </div>
-    <div class="sec-header">
-      <div class="sec-title"><span id="sh-icon-restok"></span>Riwayat Restok <small id="restok-total-label"></small></div>
+    <div class="sec-header" id="restok-riwayat-header">
+      <div class="sec-title" style="cursor:pointer" onclick="scrollRestokTop()" title="Scroll ke atas tabel"><span id="sh-icon-restok"></span>Riwayat Restok <small id="restok-total-label"></small></div>
       <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;min-width:0">
         <div class="custom-select-wrap" id="restok-filter-cabang-wrap" style="min-width:0">
           <button type="button" class="custom-select-btn has-placeholder" id="restok-filter-cabang-btn" onclick="toggleGenericDropdown('restok-filter-cabang')">
@@ -1693,10 +1778,11 @@ svg.icon { display:block; flex-shrink:0; }
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>Tanggal</th><th>Cabang</th><th>Produk</th><th>Qty Tambah</th><th style="text-align:center">Aksi</th></tr></thead>
-        <tbody id="tbl-restok"><tr class="empty-row"><td colspan="5">Memuat...</td></tr></tbody>
+        <thead><tr><th style="width:60px;text-align:center">No</th><th style="width:140px">Tanggal</th><th style="width:150px">Cabang</th><th style="width:260px">Produk</th><th style="width:150px">Qty Tambah</th><th style="text-align:center;width:120px">Aksi</th></tr></thead>
+        <tbody id="tbl-restok"><tr class="empty-row"><td colspan="6">Memuat...</td></tr></tbody>
       </table>
     </div>
+    <div id="restok-pagination" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;flex-wrap:wrap"></div>
   </div>
 </div>
 
@@ -2071,7 +2157,7 @@ svg.icon { display:block; flex-shrink:0; }
         </div>
         <div class="form-group"><label>Ambang Stok Menipis</label><input type="number" id="fp-stok-minimum" tabindex="5" min="0" step="1" placeholder="0"></div>
         <div class="form-group"><label>Status</label><div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="fp-aktif" tabindex="-1" checked><span class="toggle-slider"></span></label><span id="fp-aktif-label" style="font-size:14px;font-weight:600;color:var(--success)">Aktif</span></div></div>
-        <div class="modal-actions" style="margin-top:auto"><button class="btn-cancel" tabindex="-1" onclick="closeModalProduk()">Batal</button><button class="btn-save" id="btn-save-produk" tabindex="6" onclick="saveProduk()"><span id="btn-save-produk-icon"></span>Simpan</button></div>
+        <div class="modal-actions" style="margin-top:auto"><button class="btn-cancel" id="btn-cancel-produk" tabindex="-1" onclick="closeModalProduk()">Batal</button><button class="btn-save" id="btn-save-produk" tabindex="6" onclick="saveProduk()"><span id="btn-save-produk-icon"></span>Simpan</button></div>
       </div>
     </div>
   </div>
@@ -2320,6 +2406,7 @@ function updateTopbarTitle(name) {
 }
 let masterAuthorized = false;
 let restokSearchResults = [];
+let restokHighlightIdx = -1;
 let bahanList = [];
 let pengambilanList = [];
 let pegawaiPayrollList = [];
@@ -2582,7 +2669,7 @@ function selectCabangDropdown(prefix, value, labelText, isPlaceholder) {
   if (prefix === 'stok') {
     const val = valueInput.value;
     if (val) { loadStokCabang(); }
-    else { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr>'; document.getElementById('stok-cabang-badge').innerHTML = ''; document.getElementById('stok-summary-cards').innerHTML = ''; }
+    else { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="7">Pilih cabang untuk melihat stok</td></tr>'; document.getElementById('stok-cabang-badge').innerHTML = ''; document.getElementById('stok-summary-cards').innerHTML = ''; }
   }
   if (prefix === 'restokin') resetRestokProduk();
   if (prefix === 'retur') {
@@ -2623,6 +2710,11 @@ document.addEventListener('click', function(e) {
       if (btn) btn.classList.remove('open');
     }
   });
+  const restokInput = document.getElementById('restok-search-produk');
+  const restokResults = document.getElementById('restok-search-results');
+  if (restokInput && restokResults && !restokInput.contains(e.target) && !restokResults.contains(e.target)) {
+    restokResults.style.display = 'none';
+  }
 });
 
 const genericDropdownConfig = {};
@@ -2963,6 +3055,10 @@ function switchTab(name, btn, fromBack) {
   }
   if (name === 'retur') loadRetur();
   if (name === 'restok') loadRestok();
+  if (name === 'produk' || name === 'restok') {
+    window.scrollTo(0, 0);
+    if (mainDefault) mainDefault.scrollTop = 0;
+  }
 }
 
 // ============ SUBTAB PRODUK MASTER / PRODUK STOK ============
@@ -2985,10 +3081,15 @@ function switchProdukSubtab(name, btn) {
     document.getElementById('topbar-tagline').textContent = 'Stok Produk per Cabang';
     const val = document.getElementById('stok-cabang-value').value;
     if (val) { loadStokCabang(); }
-    else { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr>'; }
+    else { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="7">Pilih cabang untuk melihat stok</td></tr>'; }
   } else {
     updateTopbarTitle('produk');
+    scrollProdukMasterTop();
   }
+}
+function scrollProdukMasterTop() {
+  const el = document.getElementById('sec-produk');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ============ PRODUK ===========
@@ -2996,6 +3097,8 @@ async function loadProduk() {
   const { data, error } = await sb.from('produk').select('*, kategori(nama)').order('nama');
   if (error) { console.error(error); return; }
   produkList = data || [];
+  produkPage = 1;
+  produkCurrentList = null;
   renderProdukStats();
   renderProduk();
   populateReturProdukSelect();
@@ -3033,25 +3136,8 @@ function renderProdukStats() {
     <div class="stat-card"><div class="sv" style="font-size:16px;color:var(--primary)">${totalStokGlobal.toLocaleString('id')}</div><div class="sl">Total Stok Semua Cabang</div></div>
     <div class="stat-card"><div class="sv" style="color:${belumHpp>0?'var(--danger)':'var(--success)'}">${belumHpp}</div><div class="sl">Belum Ada HPP</div></div>
   `;
-  document.getElementById('produk-total-label').textContent = `(${produkList.length} produk)`;
-  renderProdukNotifBanner(stokMap);
-}
-
-// Banner peringatan di atas tab Produk Master — otomatis tampil kalau ada
-// produk stok menipis/habis, langsung terlihat begitu master.html dibuka.
-function renderProdukNotifBanner(stokMap) {
-  const banner = document.getElementById('produk-notif-banner');
-  if (!banner) return;
-  stokMap = stokMap || (() => { const m = {}; stokCabangAll.forEach(s => { if (!m[s.produk_id]) m[s.produk_id] = 0; m[s.produk_id] += s.stok; }); return m; })();
-  const habisList = produkList.filter(p => (stokMap[p.id] || 0) <= 0).map(p => p.nama);
-  const lowList = produkList.filter(p => isStokMenipis(p, stokMap[p.id] || 0)).map(p => p.nama);
-  if (!habisList.length && !lowList.length) { banner.style.display = 'none'; banner.innerHTML = ''; return; }
-  const ringkas = (arr) => arr.slice(0, 6).join(', ') + (arr.length > 6 ? ` +${arr.length - 6} lagi` : '');
-  const parts = [];
-  if (habisList.length) parts.push(`<b>${habisList.length} produk habis:</b> ${ringkas(habisList)}`);
-  if (lowList.length) parts.push(`<b>${lowList.length} produk stok menipis:</b> ${ringkas(lowList)}`);
-  banner.innerHTML = '⚠️ ' + parts.join(' &nbsp;|&nbsp; ');
-  banner.style.display = 'flex';
+  const ptl = document.getElementById('produk-total-label');
+  if (ptl) ptl.textContent = `(${produkList.length} produk)`;
 }
 
 // Toast ringkas saat aplikasi pertama dibuka (dipanggil sekali dari init())
@@ -3076,23 +3162,51 @@ function filterProduk() {
   if (status === 'aktif') list = list.filter(p => p.aktif);
   if (status === 'nonaktif') list = list.filter(p => !p.aktif);
   if (status === 'habis') { const stokMap = getStokMap(); list = list.filter(p => (stokMap[p.id] || 0) <= 0); }
+  produkPage = 1;
   renderProduk(list);
 }
 function getStokMap() { const map = {}; stokCabangAll.forEach(s => { if (!map[s.produk_id]) map[s.produk_id] = 0; map[s.produk_id] += s.stok; }); return map; }
+const PRODUK_PER_PAGE = 10;
+let produkPage = 1;
+let produkCurrentList = null;
 function renderProduk(list) {
-  list = list || produkList;
+  if (list) produkCurrentList = list;
+  list = list || produkCurrentList || produkList;
   const tbody = document.getElementById('tbl-produk');
+  const pagWrap = document.getElementById('produk-pagination');
   const stokMap = getStokMap();
-  if (!list.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Tidak ada produk ditemukan</td></tr>'; return; }
+  if (!list.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Tidak ada produk ditemukan</td></tr>'; if (pagWrap) pagWrap.innerHTML = ''; return; }
+  const totalPages = Math.max(1, Math.ceil(list.length / PRODUK_PER_PAGE));
+  if (produkPage > totalPages) produkPage = totalPages;
+  if (produkPage < 1) produkPage = 1;
+  const start = (produkPage - 1) * PRODUK_PER_PAGE;
+  const pageItems = list.slice(start, start + PRODUK_PER_PAGE);
   const mDisp = masterAuthorized ? '' : 'style="display:none"';
-  tbody.innerHTML = list.map(p => {
+  tbody.innerHTML = pageItems.map((p, idx) => {
     const totalStok = stokMap[p.id] || 0;
     const produkThumb = p.foto ? `<div class="produk-icon-mini" style="overflow:hidden;padding:0"><img src="${p.foto}" alt="${p.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>` : `<div class="produk-icon-mini" style="font-size:20px">${p.emoji || '🍞'}</div>`;
     const stokBadge = totalStok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : isStokMenipis(p, totalStok) ? `<span class="badge badge-stok-low">⚠ ${totalStok}</span>` : `<span class="badge badge-stok-ok">${totalStok}</span>`;
     const margin = p.harga - (p.hpp || 0);
     const marginInfo = p.hpp ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">HPP Rp ${p.hpp.toLocaleString('id')} · <span style="color:${margin>=0?'var(--success)':'var(--danger)'};font-weight:700">${margin>=0?'+':''}Rp ${margin.toLocaleString('id')}</span></div>` : `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">⚠️ HPP belum diisi</div>`;
-    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle ${p.aktif ? 'is-on' : 'is-off'}" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
+    return `<tr><td style="text-align:center;color:var(--text-muted);font-weight:600">${start + idx + 1}</td><td><div class="produk-info">${produkThumb}<div><div class="produk-name" title="${p.nama}">${p.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori?.nama || '—'}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span>${marginInfo}</td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="act-btns" style="justify-content:center"><button class="act-btn toggle ${p.aktif ? 'is-on' : 'is-off'}" title="${p.aktif?'Non-aktifkan':'Aktifkan'}" onclick="toggleAktif(${p.id},${p.aktif})">${svgIcon('toggle',16)}</button><button class="act-btn edit master-only" title="Edit" onclick="openEditProduk(${p.id})" ${mDisp}>${svgIcon('edit',15)}</button><button class="act-btn del master-only" title="Hapus" onclick="konfirmHapus('produk',${p.id},'${p.nama.replace(/'/g,"\\'")}',null)" ${mDisp}>${svgIcon('trash',14)}</button></div></td></tr>`;
   }).join('');
+  renderProdukPagination(totalPages);
+}
+function renderProdukPagination(totalPages) {
+  const wrap = document.getElementById('produk-pagination');
+  if (!wrap) return;
+  if (totalPages <= 1) { wrap.innerHTML = ''; return; }
+  let html = `<button class="btn-secondary" style="padding:6px 12px" ${produkPage === 1 ? 'disabled' : ''} onclick="goProdukPage(${produkPage - 1})">‹ Prev</button>`;
+  for (let p = 1; p <= totalPages; p++) {
+    const active = p === produkPage;
+    html += `<button class="btn-secondary" style="padding:6px 12px;min-width:36px;${active ? 'background:var(--primary);color:#fff;border-color:var(--primary)' : ''}" onclick="goProdukPage(${p})">${p}</button>`;
+  }
+  html += `<button class="btn-secondary" style="padding:6px 12px" ${produkPage === totalPages ? 'disabled' : ''} onclick="goProdukPage(${produkPage + 1})">Next ›</button>`;
+  wrap.innerHTML = html;
+}
+function goProdukPage(p) {
+  produkPage = p;
+  renderProduk();
 }
 async function toggleAktif(id, isAktif) {
   if (!masterAuthorized) { showToast('🔐 Login Master Data terlebih dahulu', 'warn'); openMasterLogin(); return; }
@@ -3103,10 +3217,8 @@ async function toggleAktif(id, isAktif) {
   await loadStokCabangAll();
   renderProduk(); renderProdukStats();
 }
-function openModalProduk() {
-  if (!masterAuthorized) { showToast('🔐 Login Master Data terlebih dahulu', 'warn'); openMasterLogin(); return; }
+function resetFormProduk() {
   document.getElementById('edit-produk-id').value = '';
-  document.getElementById('modal-produk-title').innerHTML = svgIcon('bread',18) + ' Tambah Produk';
   document.getElementById('fp-nama').value = '';
   reSetupRupiah('fp-harga'); setRupiahValue('fp-harga', 0);
   reSetupRupiah('fp-hpp'); setRupiahValue('fp-hpp', 0);
@@ -3116,6 +3228,12 @@ function openModalProduk() {
   document.getElementById('fp-aktif-label').style.color = 'var(--success)';
   document.getElementById('fp-stok-minimum').value = 0;
   selectedEmoji = 'bread'; buildEmojiGrid(); resetFotoUI(); populateFpKategori();
+}
+function openModalProduk() {
+  if (!masterAuthorized) { showToast('🔐 Login Master Data terlebih dahulu', 'warn'); openMasterLogin(); return; }
+  document.getElementById('btn-cancel-produk').textContent = 'Batal';
+  document.getElementById('modal-produk-title').innerHTML = svgIcon('bread',18) + ' Tambah Produk';
+  resetFormProduk();
   document.getElementById('modal-produk').classList.add('open');
   setTimeout(() => document.getElementById('fp-nama').focus(), 100);
 }
@@ -3123,6 +3241,7 @@ function openEditProduk(id) {
   if (!masterAuthorized) { showToast('🔐 Login Master Data terlebih dahulu', 'warn'); openMasterLogin(); return; }
   const p = produkList.find(x => x.id === id); if (!p) return;
   document.getElementById('edit-produk-id').value = id;
+  document.getElementById('btn-cancel-produk').textContent = 'Batal';
   document.getElementById('modal-produk-title').innerHTML = svgIcon('edit',18) + ' Edit Produk';
   document.getElementById('fp-nama').value = p.nama;
   reSetupRupiah('fp-harga'); setRupiahValue('fp-harga', p.harga);
@@ -3190,7 +3309,11 @@ async function saveProduk() {
     if (kategori_id) payload.kategori_id = kategori_id; else payload.kategori_id = null;
     if (id) { const { error } = await sb.from('produk').update(payload).eq('id', id); if (error) throw error; showToast('Produk berhasil diperbarui', 'success'); }
     else { const { error } = await sb.from('produk').insert(payload); if (error) throw error; showToast('Produk berhasil ditambahkan', 'success'); }
-    closeModalProduk(); await loadProduk();
+    await loadProduk();
+    resetFormProduk();
+    document.getElementById('modal-produk-title').innerHTML = svgIcon('bread',18) + ' Tambah Produk';
+    document.getElementById('btn-cancel-produk').textContent = 'Tutup';
+    document.getElementById('fp-nama').focus();
   } catch(e) { console.error(e); showToast('Gagal menyimpan produk', 'error'); }
   finally { btn.disabled = false; btn.innerHTML = svgIcon('save',15) + 'Simpan'; }
 }
@@ -3895,7 +4018,6 @@ async function loadStokCabangAll() {
   stokCabangAll = data || [];
   const lowCount = stokCabangAll.filter(s => isStokMenipis(produkById(s.produk_id), s.stok)).length;
   const habisCount = stokCabangAll.filter(s => s.stok <= 0).length;
-  document.getElementById('count-stok').textContent = lowCount + habisCount;
   renderCabang();
 }
 
@@ -3939,7 +4061,7 @@ function setupRealtimeStok() {
 }
 async function loadStokCabang() {
   const cabangId = parseInt(document.getElementById('stok-cabang-value').value);
-  if (!cabangId) { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="6">Pilih cabang untuk melihat stok</td></tr>'; document.getElementById('stok-cabang-badge').innerHTML = ''; document.getElementById('stok-summary-cards').innerHTML = ''; return; }
+  if (!cabangId) { document.getElementById('tbl-stok-cabang').innerHTML = '<tr class="empty-row"><td colspan="7">Pilih cabang untuk melihat stok</td></tr>'; document.getElementById('stok-cabang-badge').innerHTML = ''; document.getElementById('stok-summary-cards').innerHTML = ''; return; }
   selectedCabangId = cabangId;
   const cabang = cabangList.find(c => c.id === cabangId);
   document.getElementById('stok-cabang-badge').innerHTML = cabang ? `<span class="cabang-badge">🏪 ${cabang.nama}</span>` : '';
@@ -3957,20 +4079,48 @@ async function loadStokCabang() {
   const habis = stokCabangList.filter(p => p.stok_cabang <= 0).length;
   document.getElementById('stok-summary-cards').innerHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap"><span class="badge badge-stok-ok" style="font-size:13px">Total: ${totalStok} pcs</span><span class="badge badge-stok-low" style="font-size:13px">⚠ Menipis: ${low}</span><span class="badge badge-stok-habis" style="font-size:13px">Habis: ${habis}</span></div>`;
   document.getElementById('stok-total-label').textContent = `(${stokCabangList.length} produk)`;
-  renderStokCabang();
+  renderStokCabang(stokCabangList, true);
 }
-function renderStokCabang(list) {
-  list = list || stokCabangList;
+const STOK_PER_PAGE = 10;
+let stokPage = 1;
+let stokCurrentList = null;
+function renderStokCabang(list, resetPage) {
+  if (list) { stokCurrentList = list; if (resetPage) stokPage = 1; }
+  list = list || stokCurrentList || stokCabangList;
   const tbody = document.getElementById('tbl-stok-cabang');
-  if (!list.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Tidak ada produk aktif di cabang ini</td></tr>'; return; }
-  tbody.innerHTML = list.map(p => {
+  const pagWrap = document.getElementById('stok-pagination');
+  if (!list.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Tidak ada produk aktif di cabang ini</td></tr>'; if (pagWrap) pagWrap.innerHTML = ''; return; }
+  const totalPages = Math.max(1, Math.ceil(list.length / STOK_PER_PAGE));
+  if (stokPage > totalPages) stokPage = totalPages;
+  if (stokPage < 1) stokPage = 1;
+  const start = (stokPage - 1) * STOK_PER_PAGE;
+  const pageItems = list.slice(start, start + STOK_PER_PAGE);
+  tbody.innerHTML = pageItems.map((p, idx) => {
     const produkThumb = p.foto ? `<div class="produk-icon-mini" style="overflow:hidden;padding:0"><img src="${p.foto}" alt="${p.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>` : `<div class="produk-icon-mini" style="font-size:20px">${p.emoji || '🍞'}</div>`;
     const stok = p.stok_cabang || 0;
     const stokBadge = stok <= 0 ? `<span class="badge badge-stok-habis">Habis</span>` : isStokMenipis(p, stok) ? `<span class="badge badge-stok-low">⚠ ${stok}</span>` : `<span class="badge badge-stok-ok">${stok}</span>`;
     const disabledAttr = masterAuthorized ? '' : 'disabled';
     const displayStyle = masterAuthorized ? '' : 'style="display:none"';
-    return `<tr><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori_nama}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span></td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="stok-input-cell master-only" ${displayStyle}><input type="number" id="stok-input-${p.id}" value="${stok}" min="0" step="1" ${disabledAttr}><button class="btn-stok-inline" onclick="updateStokCabang(${p.id})" ${disabledAttr}>Simpan</button></div><span class="master-only" ${displayStyle} style="font-size:11px;color:var(--text-muted)">🔒 Login untuk edit</span></td></tr>`;
+    const noUrut = start + idx + 1;
+    return `<tr><td style="text-align:center;color:var(--text-muted);font-weight:600">${noUrut}</td><td><div class="produk-info">${produkThumb}<div><div class="produk-name">${p.nama}</div></div></div></td><td><span style="font-size:13px;color:var(--text-muted);font-weight:600">${p.kategori_nama}</span></td><td><span class="price">Rp ${p.harga.toLocaleString('id')}</span></td><td>${stokBadge}</td><td><span class="badge ${p.aktif ? 'badge-aktif' : 'badge-nonaktif'}">${p.aktif ? 'Aktif' : 'Non-aktif'}</span></td><td><div class="stok-input-cell master-only" ${displayStyle}><input type="number" id="stok-input-${p.id}" value="${stok}" min="0" step="1" ${disabledAttr}><button class="btn-stok-inline" onclick="updateStokCabang(${p.id})" ${disabledAttr}>Simpan</button></div><span class="master-only" ${displayStyle} style="font-size:11px;color:var(--text-muted)">🔒 Login untuk edit</span></td></tr>`;
   }).join('');
+  renderStokPagination(totalPages);
+}
+function renderStokPagination(totalPages) {
+  const wrap = document.getElementById('stok-pagination');
+  if (!wrap) return;
+  if (totalPages <= 1) { wrap.innerHTML = ''; return; }
+  let html = `<button class="btn-secondary" style="padding:6px 12px" ${stokPage === 1 ? 'disabled' : ''} onclick="goStokPage(${stokPage - 1})">‹ Prev</button>`;
+  for (let p = 1; p <= totalPages; p++) {
+    const active = p === stokPage;
+    html += `<button class="btn-secondary" style="padding:6px 12px;min-width:36px;${active ? 'background:var(--primary);color:#fff;border-color:var(--primary)' : ''}" onclick="goStokPage(${p})">${p}</button>`;
+  }
+  html += `<button class="btn-secondary" style="padding:6px 12px" ${stokPage === totalPages ? 'disabled' : ''} onclick="goStokPage(${stokPage + 1})">Next ›</button>`;
+  wrap.innerHTML = html;
+}
+function goStokPage(p) {
+  stokPage = p;
+  renderStokCabang(stokCurrentList || stokCabangList);
 }
 function filterStokCabang() {
   const filter = document.getElementById('stok-filter-status').value;
@@ -3978,7 +4128,7 @@ function filterStokCabang() {
   if (filter === 'habis') list = list.filter(p => p.stok_cabang <= 0);
   else if (filter === 'low') list = list.filter(p => isStokMenipis(p, p.stok_cabang));
   else if (filter === 'ok') list = list.filter(p => p.stok_cabang > 0 && !isStokMenipis(p, p.stok_cabang));
-  renderStokCabang(list);
+  renderStokCabang(list, true);
 }
 async function updateStokCabang(produkId) {
   if (!masterAuthorized) { showToast('🔐 Login Master Data terlebih dahulu', 'warn'); openMasterLogin(); return; }
@@ -4059,18 +4209,49 @@ function populateReturProdukSelect() {
 function filterRestokProduk() {
   const q = document.getElementById('restok-search-produk').value.toLowerCase().trim();
   const resultsDiv = document.getElementById('restok-search-results');
-  if (!q || q.length < 1) { resultsDiv.style.display = 'none'; return; }
+  restokHighlightIdx = -1;
+  if (!q || q.length < 1) { resultsDiv.style.display = 'none'; restokSearchResults = []; return; }
   const filtered = produkList.filter(p => p.aktif && p.nama.toLowerCase().includes(q));
-  if (!filtered.length) { resultsDiv.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px">Produk tidak ditemukan</div>'; resultsDiv.style.display = 'block'; return; }
+  if (!filtered.length) { restokSearchResults = []; resultsDiv.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px">Produk tidak ditemukan</div>'; resultsDiv.style.display = 'block'; return; }
   restokSearchResults = filtered;
   const cabangId = parseInt(document.getElementById('restokin-cabang-value').value);
-  resultsDiv.innerHTML = filtered.map(p => {
+  resultsDiv.innerHTML = filtered.map((p, idx) => {
     const thumb = p.foto ? `<img src="${p.foto}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">` : `<span style="font-size:24px">${p.emoji || '🍞'}</span>`;
     const stokDiCabang = stokCabangAll.find(s => s.produk_id === p.id && s.cabang_id === cabangId);
     const stokCabang = stokDiCabang ? stokDiCabang.stok : 0;
-    return `<div onclick="selectRestokProduk(${p.id})" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background=''"><div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">${thumb}</div><div style="flex:1"><div style="font-weight:700;font-size:13px">${p.nama}</div><div style="font-size:11px;color:var(--text-muted)">Rp ${p.harga.toLocaleString('id')} · Stok di cabang ini: ${stokCabang}</div></div><button style="padding:4px 12px;background:var(--primary);color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Pilih</button></div>`;
+    return `<div class="restok-result-item" data-idx="${idx}" onclick="selectRestokProduk(${p.id})" onmouseenter="highlightRestokResult(${idx})" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s"><div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">${thumb}</div><div style="flex:1"><div style="font-weight:700;font-size:13px">${p.nama}</div><div style="font-size:11px;color:var(--text-muted)">Rp ${p.harga.toLocaleString('id')} · Stok di cabang ini: ${stokCabang}</div></div><button style="padding:4px 12px;background:var(--primary);color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Pilih</button></div>`;
   }).join('');
   resultsDiv.style.display = 'block';
+}
+function highlightRestokResult(idx) {
+  const resultsDiv = document.getElementById('restok-search-results');
+  const items = resultsDiv.querySelectorAll('.restok-result-item');
+  items.forEach(el => { el.style.background = ''; });
+  restokHighlightIdx = idx;
+  const target = resultsDiv.querySelector(`.restok-result-item[data-idx="${idx}"]`);
+  if (target) { target.style.background = 'var(--primary-light)'; target.scrollIntoView({ block: 'nearest' }); }
+}
+function handleRestokSearchKeydown(event) {
+  const resultsDiv = document.getElementById('restok-search-results');
+  const isOpen = resultsDiv && resultsDiv.style.display !== 'none' && restokSearchResults && restokSearchResults.length > 0;
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    if (!isOpen) return;
+    const next = restokHighlightIdx < restokSearchResults.length - 1 ? restokHighlightIdx + 1 : 0;
+    highlightRestokResult(next);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (!isOpen) return;
+    const prev = restokHighlightIdx > 0 ? restokHighlightIdx - 1 : restokSearchResults.length - 1;
+    highlightRestokResult(prev);
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    if (!isOpen) return;
+    if (restokHighlightIdx >= 0 && restokSearchResults[restokHighlightIdx]) selectRestokProduk(restokSearchResults[restokHighlightIdx].id);
+    else selectRestokProdukFirst();
+  } else if (event.key === 'Escape') {
+    if (resultsDiv) resultsDiv.style.display = 'none';
+  }
 }
 function selectRestokProdukFirst() { if (restokSearchResults && restokSearchResults.length > 0) selectRestokProduk(restokSearchResults[0].id); }
 function selectRestokProduk(id) {
@@ -4099,7 +4280,9 @@ function resetRestokProduk() {
   document.getElementById('restok-produk-id').value = '';
   document.getElementById('restok-search-produk').value = '';
   document.getElementById('restok-search-results').style.display = 'none';
-  document.getElementById('restok-qty').value = '1';
+  restokSearchResults = [];
+  restokHighlightIdx = -1;
+  document.getElementById('restok-qty').value = '0';
   const previewEmpty = document.getElementById('restok-preview-empty');
   const previewContent = document.getElementById('restok-preview-content');
   const previewPanel = document.getElementById('restok-preview-panel');
@@ -4189,6 +4372,8 @@ function konfirmHapusRetur(id, produkId, qty) {
   document.getElementById('modal-confirm').classList.add('open');
 }
 
+const RESTOK_PER_PAGE = 10;
+let restokPage = 1;
 async function loadRestok() {
   const tgl = document.getElementById('restok-filter-tgl').value;
   const cabangId = document.getElementById('restok-filter-cabang').value;
@@ -4198,6 +4383,7 @@ async function loadRestok() {
   const { data, error } = await query;
   if (error) { console.error(error); return; }
   restokList = data || [];
+  restokPage = 1;
   renderRestok();
   document.getElementById('count-restok').textContent = restokList.length;
   const cabangNamaLabel = cabangId ? (cabangList.find(c => String(c.id) === String(cabangId))?.nama || '') : 'Semua Cabang';
@@ -4205,14 +4391,43 @@ async function loadRestok() {
 }
 function renderRestok() {
   const tbody = document.getElementById('tbl-restok');
-  if (!restokList.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Belum ada data restok</td></tr>'; return; }
+  const pagWrap = document.getElementById('restok-pagination');
+  if (!restokList.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Belum ada data restok</td></tr>'; if (pagWrap) pagWrap.innerHTML = ''; return; }
+  const totalPages = Math.max(1, Math.ceil(restokList.length / RESTOK_PER_PAGE));
+  if (restokPage > totalPages) restokPage = totalPages;
+  if (restokPage < 1) restokPage = 1;
+  const start = (restokPage - 1) * RESTOK_PER_PAGE;
+  const pageItems = restokList.slice(start, start + RESTOK_PER_PAGE);
   const mDisp = masterAuthorized ? '' : 'style="display:none"';
-  tbody.innerHTML = restokList.map(r => {
+  tbody.innerHTML = pageItems.map((r, i) => {
     const dt = new Date(r.created_at);
     const tgl = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
     const jam = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-    return `<tr><td><div style="font-weight:600;font-size:13px">${tgl}</div><div style="font-size:11px;color:var(--text-muted)">${jam}</div></td><td><span style="font-weight:600">${r.cabang?.nama || '—'}</span></td><td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">${r.produk?.emoji || '🍞'}</span><span style="font-weight:600">${r.produk?.nama || '—'}</span></div></td><td><span class="badge badge-stok-ok">+ ${r.qty}</span></td><td style="text-align:center"><button class="act-btn del master-only" title="Hapus restok" onclick="konfirmHapusRestok(${r.id},${r.produk_id},${r.qty})" ${mDisp}>${svgIcon('trash',14)}</button></td></tr>`;
+    const no = start + i + 1;
+    return `<tr><td style="text-align:center;color:var(--text-muted);font-weight:600">${no}</td><td><div style="font-weight:600;font-size:13px">${tgl}</div><div style="font-size:11px;color:var(--text-muted)">${jam}</div></td><td><span style="font-weight:600">${r.cabang?.nama || '—'}</span></td><td style="max-width:260px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px;flex-shrink:0">${r.produk?.emoji || '🍞'}</span><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.produk?.nama || '—'}">${r.produk?.nama || '—'}</span></div></td><td><span class="badge badge-stok-ok">+ ${r.qty}</span></td><td style="text-align:center"><button class="act-btn del master-only" title="Hapus restok" onclick="konfirmHapusRestok(${r.id},${r.produk_id},${r.qty})" ${mDisp}>${svgIcon('trash',14)}</button></td></tr>`;
   }).join('');
+  renderRestokPagination(totalPages);
+}
+function renderRestokPagination(totalPages) {
+  const wrap = document.getElementById('restok-pagination');
+  if (!wrap) return;
+  if (totalPages <= 1) { wrap.innerHTML = ''; return; }
+  let html = `<button class="btn-secondary" style="padding:6px 12px" ${restokPage === 1 ? 'disabled' : ''} onclick="goRestokPage(${restokPage - 1})">‹ Prev</button>`;
+  for (let p = 1; p <= totalPages; p++) {
+    const active = p === restokPage;
+    html += `<button class="btn-secondary" style="padding:6px 12px;min-width:36px;${active ? 'background:var(--primary);color:#fff;border-color:var(--primary)' : ''}" onclick="goRestokPage(${p})">${p}</button>`;
+  }
+  html += `<button class="btn-secondary" style="padding:6px 12px" ${restokPage === totalPages ? 'disabled' : ''} onclick="goRestokPage(${restokPage + 1})">Next ›</button>`;
+  wrap.innerHTML = html;
+}
+function goRestokPage(p) {
+  restokPage = p;
+  renderRestok();
+  scrollRestokTop();
+}
+function scrollRestokTop() {
+  const el = document.getElementById('restok-riwayat-header');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 async function submitRestok() {
   if (!masterAuthorized) { showToast('🔐 Login Master Data terlebih dahulu', 'warn'); openMasterLogin(); return; }
@@ -4239,6 +4454,7 @@ async function submitRestok() {
     else { const { error: e2 } = await sb.from('stok_cabang').insert({ produk_id: produkId, cabang_id: cabangId, stok: qty }); if (e2) throw e2; stokCabangAll.push({ produk_id: produkId, cabang_id: cabangId, stok: qty }); }
     showToast('Restok berhasil disimpan', 'success');
     resetRestokProduk();
+    document.getElementById('restok-search-produk').focus();
     await Promise.all([loadProduk(), loadRestok(), loadStokCabangAll()]);
     if (selectedCabangId) loadStokCabang();
   } catch(e) { console.error(e); showToast('Gagal menyimpan restok: ' + (e.message || 'Unknown error'), 'error'); }
