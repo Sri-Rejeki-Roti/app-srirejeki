@@ -513,11 +513,38 @@ svg.icon { display: block; flex-shrink: 0; }
 }
 .printer-modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
 .printer-modal-box p { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
-.printer-select {
-  width: 100%; padding: 10px 12px; border-radius: 10px;
-  border: 1px solid var(--border, #ddd); font-size: 13px; margin-bottom: 6px;
-  background: #fff;
+/* CUSTOM PRINTER DROPDOWN */
+.printer-dropdown { position: relative; width: 100%; margin-bottom: 6px; }
+.printer-dropdown-trigger {
+  width: 100%; padding: 10px 36px 10px 12px; border: 2px solid var(--border); border-radius: 10px;
+  font-size: 13px; font-weight: 500; background: var(--card); cursor: pointer;
+  display: flex; align-items: center; transition: border-color 0.15s, box-shadow 0.15s;
+  user-select: none; min-height: 44px; box-sizing: border-box; color: var(--text);
 }
+.printer-dropdown-trigger:hover { border-color: var(--primary); }
+.printer-dropdown-trigger.open { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,155,142,0.12); border-radius: 10px 10px 0 0; }
+.printer-trigger-text.placeholder { color: var(--text-muted); }
+.printer-dropdown-arrow {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; color: var(--text-muted); transition: transform 0.2s;
+}
+.printer-dropdown.open .printer-dropdown-arrow { transform: translateY(-50%) rotate(180deg); }
+.printer-dropdown-menu {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 60;
+  background: var(--card); border: 2px solid var(--primary); border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 8px 24px rgba(15,155,142,0.15);
+  max-height: 200px; overflow-y: auto; display: none;
+}
+.printer-dropdown.open .printer-dropdown-menu { display: block; }
+.printer-option {
+  padding: 9px 12px; font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background 0.1s; border-bottom: 1px solid var(--border); color: var(--text);
+}
+.printer-option:last-child { border-bottom: none; }
+.printer-option:hover, .printer-option.highlighted { background: var(--primary-light); }
+.printer-option.selected { background: rgba(15,155,142,0.08); font-weight: 700; }
+.printer-option-empty { padding: 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
 .printer-status { font-size: 11px; margin-bottom: 14px; font-weight: 600; }
 .printer-status.ok { color: var(--success); }
 .printer-status.err { color: var(--danger); }
@@ -876,7 +903,15 @@ svg.icon { display: block; flex-shrink: 0; }
   <div class="printer-modal-box">
     <h3>🖨️ Pilih Printer Thermal</h3>
     <p>Pilih printer yang akan dipakai untuk cetak struk via QZ Tray.</p>
-    <select class="printer-select" id="printer-select"></select>
+    <div class="printer-dropdown" id="printer-dropdown">
+      <input type="hidden" id="printer-select" value="">
+      <div class="printer-dropdown-trigger" id="printer-trigger" onclick="togglePrinterDropdown()">
+        <span class="printer-trigger-text placeholder" id="printer-trigger-text">— Pilih Printer —</span>
+      </div>
+      <svg class="printer-dropdown-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      <div class="printer-dropdown-menu" id="printer-menu"></div>
+    </div>
+
     <div class="printer-status" id="printer-status">Menghubungkan ke QZ Tray...</div>
     <div class="printer-modal-actions">
       <button class="btn-printer-refresh" onclick="refreshPrinterList()">🔄 Refresh</button>
@@ -2456,10 +2491,10 @@ function closeModalPrinter() {
 
 async function refreshPrinterList() {
   const statusEl = document.getElementById('printer-status');
-  const selectEl = document.getElementById('printer-select');
+  const menuEl = document.getElementById('printer-menu');
   statusEl.className = 'printer-status';
   statusEl.textContent = 'Menghubungkan ke QZ Tray...';
-  selectEl.innerHTML = '';
+  menuEl.innerHTML = '';
 
   if (typeof qz === 'undefined') {
     statusEl.className = 'printer-status err';
@@ -2475,29 +2510,17 @@ async function refreshPrinterList() {
     if (!printers || printers.length === 0) {
       statusEl.className = 'printer-status err';
       statusEl.textContent = 'Tidak ada printer terdeteksi di sistem ini.';
+      menuEl.innerHTML = '<div class="printer-option-empty">Tidak ada printer</div>';
+      updatePrinterTrigger();
       return;
     }
-    printers.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p;
-      opt.textContent = p;
-      if (p === qzPrinterName) opt.selected = true;
-      selectEl.appendChild(opt);
-    });
     if (!qzPrinterName) {
       qzPrinterName = printers[0];
-      selectEl.value = qzPrinterName;
     }
+    renderPrinterOptions(printers);
     qzReady = true;
     statusEl.className = 'printer-status ok';
     statusEl.textContent = `Terhubung. ${printers.length} printer ditemukan.`;
-
-    selectEl.onchange = () => {
-      qzPrinterName = selectEl.value;
-      qzPrinterManual = true;
-      statusEl.className = 'printer-status ok';
-      statusEl.textContent = `Printer aktif: ${qzPrinterName}`;
-    };
   } catch(e) {
     console.error('QZ Tray error:', e);
     statusEl.className = 'printer-status err';
@@ -2505,6 +2528,68 @@ async function refreshPrinterList() {
     qzReady = false;
   }
 }
+
+function renderPrinterOptions(printers) {
+  const menuEl = document.getElementById('printer-menu');
+  menuEl.innerHTML = '';
+  printers.forEach(p => {
+    const opt = document.createElement('div');
+    opt.className = 'printer-option' + (p === qzPrinterName ? ' selected' : '');
+    opt.textContent = p;
+    opt.onclick = () => selectPrinter(p);
+    menuEl.appendChild(opt);
+  });
+  updatePrinterTrigger();
+}
+
+function updatePrinterTrigger() {
+  const triggerText = document.getElementById('printer-trigger-text');
+  document.getElementById('printer-select').value = qzPrinterName || '';
+  if (qzPrinterName) {
+    triggerText.textContent = qzPrinterName;
+    triggerText.classList.remove('placeholder');
+  } else {
+    triggerText.textContent = '— Pilih Printer —';
+    triggerText.classList.add('placeholder');
+  }
+}
+
+function togglePrinterDropdown() {
+  const dd = document.getElementById('printer-dropdown');
+  const trigger = document.getElementById('printer-trigger');
+  const isOpen = dd.classList.contains('open');
+  if (isOpen) {
+    dd.classList.remove('open');
+    trigger.classList.remove('open');
+  } else {
+    dd.classList.add('open');
+    trigger.classList.add('open');
+  }
+}
+
+function selectPrinter(p) {
+  qzPrinterName = p;
+  qzPrinterManual = true;
+  const statusEl = document.getElementById('printer-status');
+  statusEl.className = 'printer-status ok';
+  statusEl.textContent = `Printer aktif: ${qzPrinterName}`;
+  document.querySelectorAll('#printer-menu .printer-option').forEach(el => {
+    el.classList.toggle('selected', el.textContent === p);
+  });
+  updatePrinterTrigger();
+  document.getElementById('printer-dropdown').classList.remove('open');
+  document.getElementById('printer-trigger').classList.remove('open');
+}
+
+// Close printer dropdown on outside click
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('printer-dropdown');
+  if (dd && !dd.contains(e.target)) {
+    dd.classList.remove('open');
+    const trigger = document.getElementById('printer-trigger');
+    if (trigger) trigger.classList.remove('open');
+  }
+});
 
 async function printViaQZ(htmlContent) {
   try {
