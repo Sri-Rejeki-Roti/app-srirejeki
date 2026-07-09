@@ -136,6 +136,7 @@ svg.icon { display: block; flex-shrink: 0; }
 .produk-grid.view-list .pstok { margin-top: 0; }
 .produk-grid.view-list .pinfo-left { display: flex; flex-direction: column; gap: 2px; }
 .produk-grid.view-list .pinfo-right { text-align: right; flex-shrink: 0; }
+.produk-grid.view-list .pinfo-right-wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 /* MODE COMPACT (teks saja) */
 .produk-grid.view-compact { grid-template-columns: 1fr; gap: 4px; }
@@ -147,6 +148,7 @@ svg.icon { display: block; flex-shrink: 0; }
 .produk-grid.view-compact .pstok { margin-top: 0; }
 .produk-grid.view-compact .pinfo-left { display: flex; align-items: center; gap: 10px; }
 .produk-grid.view-compact .pinfo-right { text-align: right; flex-shrink: 0; }
+.produk-grid.view-compact .pinfo-right-wrap { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .produk-card {
   background: var(--card); border: 2px solid var(--border); border-radius: var(--radius);
   padding: 0 0 8px; cursor: pointer; text-align: center; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
@@ -157,6 +159,10 @@ svg.icon { display: block; flex-shrink: 0; }
   box-shadow: 0 10px 24px rgba(15,155,142,0.22), var(--shadow-pop);
 }
 .produk-card:active { transform: scale(0.96) translateY(-1px); }
+.produk-card.kbd-selected {
+  border-color: var(--primary); transform: translateY(-3px);
+  box-shadow: 0 0 0 3px rgba(15,155,142,0.35), 0 10px 24px rgba(15,155,142,0.22), var(--shadow-pop);
+}
 
 /* Media area: sama tinggi untuk varian foto maupun ikon, supaya tinggi kartu selalu konsisten */
 .produk-card .pmedia {
@@ -341,15 +347,6 @@ svg.icon { display: block; flex-shrink: 0; }
 .modal h3 { font-size: 19px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .modal-total { font-size: 34px; font-weight: 800; color: var(--primary-dark); text-align: center; margin: 12px 0; }
 .modal-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-.pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-.pay-opt {
-  padding: 14px 8px; border: 2px solid var(--border); border-radius: var(--radius-sm); text-align: center; cursor: pointer;
-  font-size: 13px; font-weight: 600; color: var(--text-muted); transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 8px;
-}
-.pay-opt .po-icon { width: 26px; height: 26px; }
-.pay-opt:hover { border-color: var(--primary); }
-.pay-opt.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
-.pay-opt.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 .bayar-input {
   width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 17px;
   font-weight: 700; margin-bottom: 12px; text-align: right; transition: border-color 0.15s;
@@ -394,6 +391,15 @@ svg.icon { display: block; flex-shrink: 0; }
 }
 .btn-confirm:hover:not(:disabled) { transform: translateY(-1px); }
 .btn-confirm:disabled { background: #ccc; box-shadow: none; }
+.btn-confirm:focus-visible,
+.btn-confirm.kbd-focus {
+  outline: 3px solid #ffffff;
+  outline-offset: -5px;
+  box-shadow: var(--shadow-md), 0 0 0 4px rgba(15,155,142,0.55), 0 0 0 7px rgba(255,255,255,0.9);
+}
+.btn-cancel:focus-visible {
+  outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,155,142,0.15);
+}
 
 /* STRUK MODAL */
 .struk { font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.65; }
@@ -1061,12 +1067,6 @@ svg.icon { display: block; flex-shrink: 0; }
     </div>
     <div class="modal-total" id="modal-total-display">Rp 0</div>
 
-    <div class="modal-label">Metode Pembayaran</div>
-    <div class="pay-grid" style="grid-template-columns:1fr 1fr">
-      <div class="pay-opt active" data-metode="tunai" onclick="pilihMetode(this)"><span class="po-icon" id="icon-cash"></span>Tunai</div>
-      <div class="pay-opt" data-metode="kredit" onclick="pilihMetode(this)"><span class="po-icon" id="icon-credit"></span>Kredit</div>
-    </div>
-
     <div id="tunai-section">
       <div class="modal-label">Uang Diterima</div>
       <input type="text" class="bayar-input" id="bayar-input" placeholder="Rp 0" oninput="formatUangInput(this,'modal')" inputmode="numeric" onkeydown="handleBayarKey(event)">
@@ -1078,7 +1078,7 @@ svg.icon { display: block; flex-shrink: 0; }
 
     <label class="print-toggle">
       <div class="print-toggle-track">
-        <input type="checkbox" id="chk-print" checked>
+        <input type="checkbox" id="chk-print">
         <div class="print-toggle-thumb"></div>
       </div>
       <span>Print struk otomatis</span>
@@ -1566,8 +1566,6 @@ function mountStaticIcons() {
   document.getElementById('icon-history-h').innerHTML = svgIcon('history', 17);
   document.getElementById('icon-close-1').innerHTML = svgIcon('close', 16);
   document.getElementById('icon-pay-h').innerHTML = svgIcon('cash', 19);
-  document.getElementById('icon-cash').innerHTML = svgIcon('cash', 24);
-  document.getElementById('icon-credit').innerHTML = svgIcon('credit', 24);
   document.getElementById('icon-check').innerHTML = svgIcon('check', 15);
   document.getElementById('icon-print').innerHTML = svgIcon('print', 15);
 }
@@ -1668,10 +1666,15 @@ async function loadKategori() {
   if (error) throw new Error('Gagal memuat kategori: ' + error.message);
   kategoriList = data || [];
   const bar = document.getElementById('kategori-bar');
-  bar.innerHTML = '<div class="ktab active" data-id="all" onclick="pilihKategori(this)">Semua</div>';
+  bar.innerHTML = '<div class="ktab" data-id="all" onclick="pilihKategori(this)">Semua</div>';
   kategoriList.forEach(k => {
-    bar.innerHTML += `<div class="ktab" data-id="${k.id}" onclick="pilihKategori(this)">${k.nama}</div>`;
+    const isRoti = k.nama.trim().toLowerCase() === 'roti';
+    bar.innerHTML += `<div class="ktab${isRoti ? ' active' : ''}" data-id="${k.id}" onclick="pilihKategori(this)">${k.nama}</div>`;
   });
+  // Fallback: jika tidak ada kategori bernama "Roti", pakai "Semua" sebagai default
+  if (!bar.querySelector('.ktab.active')) {
+    bar.querySelector('.ktab[data-id="all"]').classList.add('active');
+  }
 }
 
 async function loadProduk() {
@@ -1693,7 +1696,7 @@ async function loadProduk() {
     ...row.produk,
     stok: row.stok
   })).sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
-  renderProduk(produkList);
+  filterProduk();
 }
 
 function initRealtimeStok() {
@@ -1856,16 +1859,22 @@ function setView(mode) {
   document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
   const idx = mode === 'grid' ? 0 : mode === 'list' ? 1 : 2;
   document.querySelectorAll('.view-btn')[idx].classList.add('active');
+  // PENTING: struktur HTML kartu berbeda antara mode grid vs list/compact
+  // (harga & stok ada di elemen yang berbeda). Kalau tidak di-render ulang,
+  // CSS akan menyembunyikan harga/stok tanpa ada elemen pengganti untuk menampilkannya.
+  renderProduk(produkFullList, false);
 }
 
 const PRODUK_PAGE_SIZE = 20;
 let produkPage = 1;
 let produkFullList = []; // list terfilter saat ini (sebelum dipotong per halaman)
+let produkSelectedIdx = -1; // index kartu produk yang sedang disorot via panah keyboard
 
 function renderProduk(list, resetPage = true) {
   const grid = document.getElementById('produk-grid');
   const pagEl = document.getElementById('produk-pagination');
   produkFullList = list;
+  produkSelectedIdx = -1;
   if (resetPage) produkPage = 1;
 
   if (!list.length) {
@@ -1924,11 +1933,13 @@ function renderProduk(list, resetPage = true) {
             <div class="pname">${p.nama}</div>
             ${viewMode === 'list' ? '' : ''}
           </div>
-          <div class="pinfo-right">
-            <div class="pprice">${harga}</div>
-            <div class="pstok ${stokClass}">${stokLabel}</div>
+          <div class="pinfo-right-wrap">
+            <div class="pinfo-right">
+              <div class="pprice">${harga}</div>
+              <div class="pstok ${stokClass}">${stokLabel}</div>
+            </div>
+            ${ovBtn}
           </div>
-          ${ovBtn}
         </div>
       </div>`;
     }
@@ -1982,10 +1993,44 @@ function handleSearchEnter(e) {
     document.getElementById('bayar-input').select();
     return;
   }
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const cards = Array.from(document.querySelectorAll('#produk-grid .produk-card'));
+    if (!cards.length) return;
+    e.preventDefault();
+    // Hapus sorotan lama
+    if (produkSelectedIdx >= 0 && cards[produkSelectedIdx]) {
+      cards[produkSelectedIdx].classList.remove('kbd-selected');
+    }
+    if (produkSelectedIdx === -1) {
+      // Belum ada seleksi: panah bawah mulai dari kartu pertama, panah atas mulai dari kartu terakhir
+      produkSelectedIdx = (e.key === 'ArrowDown') ? 0 : cards.length - 1;
+    } else if (e.key === 'ArrowDown') {
+      produkSelectedIdx = Math.min(produkSelectedIdx + 1, cards.length - 1);
+    } else {
+      produkSelectedIdx = Math.max(produkSelectedIdx - 1, 0);
+    }
+    const selCard = cards[produkSelectedIdx];
+    selCard.classList.add('kbd-selected');
+    selCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return;
+  }
+
   if (e.key !== 'Enter') return;
-  const cards = document.querySelectorAll('#produk-grid .produk-card:not(.stok-habis)');
-  if (cards.length === 1) {
-    cards[0].click();
+
+  // Jika ada kartu yang sedang disorot via panah, tambahkan itu ke keranjang
+  const cards = document.querySelectorAll('#produk-grid .produk-card');
+  if (produkSelectedIdx >= 0 && cards[produkSelectedIdx]) {
+    cards[produkSelectedIdx].click();
+    document.getElementById('search-input').value = '';
+    filterProduk();
+    return;
+  }
+
+  // Fallback lama: jika hasil pencarian tinggal 1 produk, langsung tambahkan
+  const activeCards = document.querySelectorAll('#produk-grid .produk-card:not(.stok-habis)');
+  if (activeCards.length === 1) {
+    activeCards[0].click();
     document.getElementById('search-input').value = '';
     filterProduk();
   }
@@ -2191,27 +2236,33 @@ function handleBayarKey(e) {
     if (!btn.disabled) btn.click();
   }
   if (e.key === 'Tab') {
+    // Di dalam modal pembayaran, Tab dari Uang Diterima langsung ke tombol Konfirmasi
+    if (document.getElementById('modal-bayar').classList.contains('open') && !e.shiftKey) {
+      e.preventDefault();
+      const btnConfirm = document.getElementById('btn-confirm');
+      if (!btnConfirm.disabled) {
+        btnConfirm.focus();
+        // Fallback manual highlight: beberapa browser tidak selalu memicu
+        // :focus-visible saat fokus dipindahkan lewat .focus() dari JS,
+        // jadi kita tandai sendiri agar sorotan pasti terlihat.
+        btnConfirm.classList.add('kbd-focus');
+      }
+      return;
+    }
     handleUangTab(e);
   }
 }
 
-// TIPE TRANSAKSI
-function updateMetodeBayarByTipe() {
-  const kreditOpt = document.querySelector('.pay-opt[data-metode="kredit"]');
-  if (!kreditOpt) return;
-  if (tipeTransaksi === 'umum') {
-    kreditOpt.classList.add('disabled');
-    // Jika kredit sedang aktif, paksa balik ke tunai
-    if (metodeBayar === 'kredit') {
-      metodeBayar = 'tunai';
-      document.querySelectorAll('.pay-opt').forEach(e => e.classList.remove('active'));
-      document.querySelector('.pay-opt[data-metode="tunai"]').classList.add('active');
-      document.getElementById('tunai-section').style.display = 'block';
-    }
-  } else {
-    kreditOpt.classList.remove('disabled');
+// Lepas highlight manual saat tombol Konfirmasi kehilangan fokus
+document.addEventListener('DOMContentLoaded', () => {
+  const btnConfirmEl = document.getElementById('btn-confirm');
+  if (btnConfirmEl) {
+    btnConfirmEl.addEventListener('blur', () => btnConfirmEl.classList.remove('kbd-focus'));
+    btnConfirmEl.addEventListener('click', () => btnConfirmEl.classList.remove('kbd-focus'));
   }
-}
+});
+
+// TIPE TRANSAKSI
 
 function setTipe(tipe, el) {
   tipeTransaksi = tipe;
@@ -2219,7 +2270,6 @@ function setTipe(tipe, el) {
   el.classList.add('active');
   const row = document.getElementById('pelanggan-row');
   tipe === 'pelanggan' ? row.classList.add('show') : row.classList.remove('show');
-  updateMetodeBayarByTipe();
   if (tipe === 'pelanggan') {
     onPelangganChange();
   } else {
@@ -2245,33 +2295,26 @@ function openModalBayar() {
   document.getElementById('bayar-input').value = '';
   document.getElementById('bayar-input').dataset.nilai = '0';
   document.getElementById('kembalian-display').textContent = 'Rp 0';
-  // Reset ke tunai
-  metodeBayar = 'tunai';
-  document.querySelectorAll('.pay-opt').forEach(e => e.classList.remove('active'));
-  document.querySelector('.pay-opt[data-metode="tunai"]').classList.add('active');
-  document.getElementById('tunai-section').style.display = 'block';
   document.getElementById('btn-confirm').disabled = false;
+  // Print struk otomatis selalu default NONAKTIF setiap modal dibuka
+  document.getElementById('chk-print').checked = false;
   document.getElementById('modal-bayar').classList.add('open');
-  updateMetodeBayarByTipe();
-  setTimeout(() => document.getElementById('bayar-input').focus(), 100);
+  setTimeout(() => {
+    const inp = document.getElementById('bayar-input');
+    inp.focus();
+    inp.select();
+  }, 100);
 }
 
 function closeModalBayar() {
   document.getElementById('modal-bayar').classList.remove('open');
 }
 
-function pilihMetode(el) {
-  document.querySelectorAll('.pay-opt').forEach(e => e.classList.remove('active'));
-  el.classList.add('active');
-  metodeBayar = el.dataset.metode;
-  document.getElementById('tunai-section').style.display = metodeBayar === 'tunai' ? 'block' : 'none';
-}
-
 function hitungKembalian() {
   const bayar = parseInt(document.getElementById('bayar-input').dataset.nilai) || 0;
   const kembalian = bayar - totalFinal;
   document.getElementById('kembalian-display').textContent = 'Rp ' + Math.max(0, kembalian).toLocaleString('id');
-  document.getElementById('btn-confirm').disabled = (metodeBayar === 'tunai' && kembalian < 0);
+  document.getElementById('btn-confirm').disabled = (kembalian < 0);
 }
 
 // Flag untuk mencegah double-submit
@@ -2289,26 +2332,18 @@ async function prosesTransaksi() {
   document.getElementById('btn-confirm').disabled = true;
   document.getElementById('btn-confirm').innerHTML = 'Memproses...';
 
-  // Validasi kredit wajib pilih pelanggan
   const pelangganId = document.getElementById('pelanggan-select').value || null;
-  if (metodeBayar === 'kredit' && !pelangganId) {
-    showToast('Pilih pelanggan untuk transaksi kredit', 'warn');
-    isProcessing = false;
-    document.getElementById('btn-confirm').disabled = false;
-    document.getElementById('btn-confirm').innerHTML = svgIcon('check',15) + 'Konfirmasi';
-    return;
-  }
 
   // Ambil nomor urut terbaru dari server (fix race condition)
   // Saat offline, gunakan nomor lokal saja
   if (navigator.onLine) await loadNomor();
   const nomor = buatNomor();
 
-  const bayar = metodeBayar === 'tunai' ? (parseInt(document.getElementById('bayar-input').dataset.nilai) || 0) : totalFinal;
+  const bayar = parseInt(document.getElementById('bayar-input').dataset.nilai) || 0;
   const kembalian = Math.max(0, bayar - totalFinal);
-  const status = metodeBayar === 'kredit' ? 'kredit' : 'lunas';
+  const status = 'lunas';
 
-  if (metodeBayar === 'tunai' && bayar < totalFinal) {
+  if (bayar < totalFinal) {
     showToast('Uang kurang', 'warn');
     isProcessing = false;
     document.getElementById('btn-confirm').disabled = false;
@@ -2428,23 +2463,6 @@ async function prosesTransaksi() {
         } else {
           const p = produkList.find(x => x.id == id);
           if (p) p.stok -= item.qty;
-        }
-      }
-
-      // Update kredit pelanggan jika kredit
-      if (metodeBayar === 'kredit' && pelangganId) {
-        // BUG FIX: baca total_kredit terkini langsung dari DB (bukan cache lokal
-        // pelangganList) sesaat sebelum update, untuk memperkecil race condition
-        // kalau ada transaksi kredit pelanggan yang sama terjadi nyaris bersamaan
-        // (mis. dari device kasir lain).
-        try {
-          const { data: pelFresh, error: ePel } = await sb.from('pelanggan')
-            .select('total_kredit').eq('id', pelangganId).single();
-          if (ePel) throw ePel;
-          const kreditLama = pelFresh?.total_kredit ?? 0;
-          await sb.from('pelanggan').update({ total_kredit: kreditLama + totalFinal }).eq('id', pelangganId);
-        } catch (eKredit) {
-          console.error('Gagal update total kredit pelanggan:', eKredit);
         }
       }
 
