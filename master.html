@@ -5562,7 +5562,6 @@ function setResetProgress(pct, step) {
 }
 
 async function eksekusiResetDatabase() {
-  // Ambil tabel yang dicentang (dalam urutan aman)
   const selected = RESET_TABLE_ORDER.filter(t => {
     const cb = document.getElementById('rst-' + t);
     return cb && cb.checked;
