@@ -1,43 +1,71 @@
-# ============================================================
-# Cache & dependency folder - JANGAN pernah di-commit
-# ============================================================
-npm-cache/
-.npm-cache/
-node_modules/
-.npm-global/
-.npm/
+```
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
-# ============================================================
-# File environment / secret - JANGAN pernah di-commit
-# (VAPID private key, service role key, dsb sebaiknya taruh di sini
-#  atau di Supabase Secrets, BUKAN di file yang ikut ke-push ke Git)
-# ============================================================
+# Environment
 .env
 .env.local
-.env.*.local
-*.key
-*.pem
+*.env.*
 
-# ============================================================
-# File sistem OS
-# ============================================================
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ============================================================
-# Log & file sementara editor
-# ============================================================
-*.log
-npm-debug.log*
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
-# ============================================================
-# Supabase CLI local (kalau pakai `supabase start` lokal)
-# ============================================================
-supabase/.branches
-supabase/.temp
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+dist/
+build/
+target/
+.gradle/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Compiled files
+*.pyc
+*.class
+*.o
+*.exe
+*.dll
+*.so
+*.a
+*.obj
+*.out
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```
